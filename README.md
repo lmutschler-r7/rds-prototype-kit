@@ -11,14 +11,43 @@ npm run dev
 
 Open the local URL shown by Vite (usually `http://localhost:5173`).
 
+## Switch Theme and Nav Style
+
+This prototype supports two runtime style toggles using localStorage:
+1. Theme mode: `light` or `dark`
+2. Nav shell style: `future` or `current`
+
+Current defaults (when no localStorage override exists):
+1. Theme mode: `light`
+2. Nav shell style: `future`
+
+From the browser console:
+
+```js
+localStorage.setItem('themeMode', 'dark');      // or 'light'
+localStorage.setItem('shellVariant', 'current'); // or 'future'
+window.location.reload();
+```
+
+Reset to defaults:
+
+```js
+localStorage.removeItem('themeMode');
+localStorage.removeItem('shellVariant');
+window.location.reload();
+```
+
+Code location:
+1. `app/App.tsx` controls the `RDSThemeProvider` theme mode and shell component mapping.
+
 ## Goal
 
-This repo is optimized for designers and UX engineers to:
+This repo is optimized for designers to:
 1. Add new pages fast.
 2. Keep pages visually consistent via RDS tokens.
 3. Demo flows in-browser without backend dependencies.
 
-## Build a New Page (Designer Workflow)
+## Build a New Page
 
 1. Create a page file in `app/pages`.
 2. Use RDS + RDS-labs components first (avoid custom wrappers when a standard component exists).

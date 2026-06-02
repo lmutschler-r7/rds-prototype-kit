@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { CurrentNavShell } from '../lib/CurrentNavShell';
 import { FutureNavShell } from '../lib/FutureNavShell';
 import { Box, CssBaseline, RDSThemeProvider, Typography } from '@rapid7/rds';
-import navConfig from './nav-future.json';
 
 // Page Component Imports
 import { CommandHome } from './pages/CommandHome';
@@ -12,7 +11,15 @@ import { Findings } from './pages/Findings';
 import { ResponseRemediation } from './pages/ResponseRemediation';
 
 export const App = () => {
-  const shellVariant: 'current' | 'future' = 'current';
+  const storedShellVariant = window.localStorage.getItem('shellVariant');
+  const storedThemeMode = window.localStorage.getItem('themeMode');
+
+  const shellVariant: 'current' | 'future' =
+    storedShellVariant === 'current' || storedShellVariant === 'future' ? storedShellVariant : 'future';
+
+  const themeMode: 'light' | 'dark' =
+    storedThemeMode === 'light' || storedThemeMode === 'dark' ? storedThemeMode : 'light';
+
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
@@ -48,9 +55,9 @@ export const App = () => {
     }
   };
 
- // Change themeMode to 'light' or 'dark' or toggle shellVariant to current/future 
-  const ShellComponent = shellVariant === 'future' ? CurrentNavShell : FutureNavShell;
-  const themeMode = navConfig.themeMode === 'light' ? 'light' : 'dark';
+ // Set localStorage keys to switch app shell/theme at runtime:
+ // shellVariant: 'current' | 'future', themeMode: 'light' | 'dark'
+  const ShellComponent = shellVariant === 'future' ? FutureNavShell : CurrentNavShell;
 
   return (
     <RDSThemeProvider themeMode={themeMode} brandName="Callisto">

@@ -338,14 +338,13 @@ export const Findings: React.FC = () => {
       </Tabs>
 
       {/* Filters */}
-      <Box mb="20px">
+      <Box mb="16px">
         <FilterBar
           filters={filterSchema}
           logicalOperatorMode="BOTH"
           onFilterModelChange={(model) => {
             setFilters(getFiltersFromModel(model));
           }}
-          sx={{ mb: '16px' }}
         />
       </Box>
 
@@ -353,6 +352,7 @@ export const Findings: React.FC = () => {
       <DataGridTable
         columns={columns}
         rows={filteredRows}
+        totalCount={filteredRows.length}
         isClientSide
         isLoading={false}
         disableRowSelectionOnClick

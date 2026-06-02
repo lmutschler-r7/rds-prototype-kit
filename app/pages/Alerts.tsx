@@ -115,7 +115,7 @@ const createColumns = (theme: Theme): GridColDef<AlertItem>[] => [
     headerAlign: 'left',
     renderCell: (params: GridRenderCellParams<AlertItem, AlertPriority>) => (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', width: '100%' }}>
-        <Chip label={params.value} size="small" color={getPriorityColor(params.value)} />
+        <Chip label={params.value ?? 'Low'} size="small" color={getPriorityColor(params.value ?? 'Low')} />
       </Box>
     )
   },
@@ -151,7 +151,7 @@ const createColumns = (theme: Theme): GridColDef<AlertItem>[] => [
     headerAlign: 'left',
     renderCell: (params: GridRenderCellParams<AlertItem, AlertDisposition>) => (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', width: '100%' }}>
-        <Chip label={params.value} size="small" color={getDispositionColor(params.value)} />
+        <Chip label={params.value ?? 'Unknown'} size="small" color={getDispositionColor(params.value ?? 'Unknown')} />
       </Box>
     )
   },

@@ -451,12 +451,12 @@ export const ResponseRemediation: React.FC = () => {
             onFilterModelChange={(model) => {
               setRemediationFilters(getRemediationFiltersFromModel(model));
             }}
-            sx={{ mb: '16px' }}
           />
 
           <DataGridTable
             columns={remediationColumns}
             rows={remediationRows}
+            totalCount={remediationRows.length}
             isClientSide
             isLoading={false}
             onSearchChange={(value) => setRemediationSearch(value)}
@@ -510,6 +510,7 @@ export const ResponseRemediation: React.FC = () => {
           <DataGridTable
             columns={caseColumns}
             rows={caseRows}
+            totalCount={caseRows.length}
             isClientSide
             isLoading={false}
             onSearchChange={(value) => setCaseSearch(value)}
