@@ -4,22 +4,27 @@ import { CurrentNavShell } from '../lib/CurrentNavShell';
 import { FutureNavShell } from '../lib/FutureNavShell';
 import { Box, CssBaseline, RDSThemeProvider, Typography } from '@rapid7/rds';
 
-// Page Component Imports
+// Add new page imports here
 import { CommandHome } from './pages/CommandHome';
 import { Alerts } from './pages/Alerts';
 import { Findings } from './pages/Findings';
 import { ResponseRemediation } from './pages/ResponseRemediation';
 
 export const App = () => {
+  // Runtime style overrides (falls back to defaults below)
   const storedShellVariant = window.localStorage.getItem('shellVariant');
   const storedThemeMode = window.localStorage.getItem('themeMode');
 
+  // App-level visual defaults
+  // Change nav style default here: 'future' or 'current'
   const shellVariant: 'current' | 'future' =
-    storedShellVariant === 'current' || storedShellVariant === 'future' ? storedShellVariant : 'future';
+    storedShellVariant === 'current' || storedShellVariant === 'future' ? storedShellVariant : 'current';
 
+  // Change theme default here: 'light' or 'dark'
   const themeMode: 'light' | 'dark' =
     storedThemeMode === 'light' || storedThemeMode === 'dark' ? storedThemeMode : 'light';
 
+  // URL-driven routing state
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
@@ -28,6 +33,8 @@ export const App = () => {
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
+  // Route-to-page mapping
+  // Add new routes/pages in this switch
   const renderPage = () => {
     switch (currentPath.toLowerCase().trim()) {
       case '/command-home':
@@ -55,11 +62,11 @@ export const App = () => {
     }
   };
 
- // Set localStorage keys to switch app shell/theme at runtime:
- // shellVariant: 'current' | 'future', themeMode: 'light' | 'dark'
+  // Nav shell variant selector
   const ShellComponent = shellVariant === 'future' ? FutureNavShell : CurrentNavShell;
 
   return (
+    // Global theme + shell wrapper
     <RDSThemeProvider themeMode={themeMode} brandName="Callisto">
       <CssBaseline />
       <ShellComponent>{renderPage()}</ShellComponent>
