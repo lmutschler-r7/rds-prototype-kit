@@ -13,32 +13,28 @@ Open the local URL shown by Vite (usually `http://localhost:5173`).
 
 ## Switch Theme and Nav Style
 
-This prototype supports two runtime style toggles using localStorage:
-1. Theme mode: `light` or `dark`
-2. Nav shell style: `future` or `current`
+Set these directly in `app/App.tsx`.
 
-Current defaults (when no localStorage override exists):
-1. Theme mode: `light`
-2. Nav shell style: `future`
+1. Open `app/App.tsx`.
+2. Find the fallback values in these two expressions:
 
-From the browser console:
+```ts
+const shellVariant: 'current' | 'future' =
+	storedShellVariant === 'current' || storedShellVariant === 'future' ? storedShellVariant : 'future';
 
-```js
-localStorage.setItem('themeMode', 'dark');      // or 'light'
-localStorage.setItem('shellVariant', 'current'); // or 'future'
-window.location.reload();
+const themeMode: 'light' | 'dark' =
+	storedThemeMode === 'light' || storedThemeMode === 'dark' ? storedThemeMode : 'light';
 ```
 
-Reset to defaults:
+3. Change the fallback values to set your default app style:
+	 - Nav shell default: change `'future'` to `'current'` if needed
+	 - Theme default: change `'light'` to `'dark'` if needed
 
-```js
-localStorage.removeItem('themeMode');
-localStorage.removeItem('shellVariant');
-window.location.reload();
-```
-
-Code location:
-1. `app/App.tsx` controls the `RDSThemeProvider` theme mode and shell component mapping.
+Notes:
+1. `shellVariant` maps to:
+	 - `'future'` -> `FutureNavShell`
+	 - `'current'` -> `CurrentNavShell`
+2. If a previous localStorage override exists, it will still win over your new defaults. Remove `themeMode` and `shellVariant` from localStorage if your edit does not appear immediately.
 
 ## Goal
 
