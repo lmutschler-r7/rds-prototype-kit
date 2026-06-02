@@ -1,0 +1,150 @@
+{
+  "username": "leander-r7",
+  "themeMode": "light",
+  "navTree": [
+    {
+      "id": "rfi",
+      "type": "leaf",
+      "label": "RFI",
+      "path": "/rfi",
+      "icon": "RFIRequestForInformation"
+    },
+    {
+      "id": "notifications",
+      "type": "leaf",
+      "label": "Notifications",
+      "path": "/notifications",
+      "icon": "Notification"
+    },
+    {
+      "id": "help",
+      "type": "leaf",
+      "label": "Help",
+      "path": "/help",
+      "icon": "HelpInformation"
+    },
+    {
+      "id": "workspaces-header",
+      "type": "section-header",
+      "label": "Workspaces"
+    },
+    {
+      "id": "command-home",
+      "type": "leaf",
+      "label": "Command Home",
+      "path": "/command-home",
+      "icon": "Home"
+    },
+    {
+      "id": "reports",
+      "type": "parent",
+      "label": "Reports & Dashboards",
+      "icon": "Reporting",
+      "children": [
+        { "id": "report-executive-risk", "type": "leaf", "label": "Executive Risk View", "path": "/reports/executive" },
+        { "id": "report-attack-surface", "type": "leaf", "label": "Attack Surface Dashboard", "path": "/reports/asm" }
+      ]
+    },
+    {
+      "id": "response-remediation",
+      "type": "leaf",
+      "label": "Response & Remediation",
+      "path": "/response",
+      "icon": "ResponseRemediation"
+    },
+    {
+      "id": "alerts",
+      "type": "leaf",
+      "label": "Alerts",
+      "path": "/alerts",
+      "icon": "HighAlert"
+    },
+    {
+      "id": "log-search",
+      "type": "leaf",
+      "label": "Log Search",
+      "path": "/log-search",
+      "icon": "LogSearch"
+    },
+    {
+      "id": "findings",
+      "type": "leaf",
+      "label": "Findings",
+      "path": "/findings",
+      "icon": "LegacyLogSearch"
+    },
+    {
+      "id": "assets-identities",
+      "type": "parent",
+      "label": "Assets & Identities",
+      "icon": "Assets",
+      "children": [
+        { "id": "users-accounts", "type": "leaf", "label": "Users & Accounts", "path": "/assets/users" },
+        { "id": "assets-list", "type": "leaf", "label": "Assets", "path": "/assets/list" }
+      ]
+    },
+    {
+      "id": "data-connectors",
+      "type": "parent",
+      "label": "Data Connectors",
+      "icon": "DataCollection",
+      "children": [
+        { "id": "connector-agents", "type": "leaf", "label": "Agents", "path": "/connectors/agents" },
+        { "id": "connector-sensors", "type": "leaf", "label": "Network Sensors", "path": "/connectors/sensors" },
+        { "id": "connector-engines", "type": "leaf", "label": "Scan Engines", "path": "/connectors/engines" },
+        { "id": "connector-collectors", "type": "leaf", "label": "Collectors", "path": "/connectors/collectors" },
+        { "id": "connector-sources", "type": "leaf", "label": "Event Sources", "path": "/connectors/sources" },
+        { "id": "connector-plugins", "type": "leaf", "label": "Plugins", "path": "/connectors/plugins" }
+      ]
+    },
+    {
+      "id": "controls-compliance",
+      "type": "parent",
+      "label": "Controls & Compliance",
+      "icon": "Filter",
+      "children": [
+        { "id": "control-goals", "type": "leaf", "label": "Goals and SLAs", "path": "/controls/goals" },
+        { "id": "control-policy", "type": "leaf", "label": "Agent-Based Policy", "path": "/controls/policy" },
+        { "id": "control-iac", "type": "leaf", "label": "Infrastructure as Code", "path": "/controls/iac" },
+        { "id": "control-insights", "type": "leaf", "label": "Insights", "path": "/controls/insights" },
+        { "id": "control-packs", "type": "leaf", "label": "Compliance Packs", "path": "/controls/packs" },
+        { "id": "control-runtime", "type": "leaf", "label": "Runtime", "path": "/controls/runtime" }
+      ]
+    },
+    {
+      "id": "administration",
+      "type": "parent",
+      "label": "Administration",
+      "icon": "Settings",
+      "children": [
+        { "id": "admin-company-settings", "type": "leaf", "label": "Company Settings", "path": "/admin/company-settings" },
+        { "id": "admin-credential-mgmt", "type": "leaf", "label": "Credential Management", "path": "/admin/credentials" },
+        
+        { "id": "admin-group-user-mgmt", "type": "group-header", "label": "User Management" },
+        { "id": "admin-user-overview", "type": "leaf", "label": "Overview", "path": "/admin/users/overview" },
+        { "id": "admin-users-list", "type": "leaf", "label": "Users", "path": "/admin/users/list" },
+        { "id": "admin-user-groups", "type": "leaf", "label": "User Groups", "path": "/admin/users/groups" },
+        { "id": "admin-user-roles", "type": "leaf", "label": "User Roles", "path": "/admin/users/roles" },
+        { "id": "admin-user-conflicts", "type": "leaf", "label": "User Conflicts", "path": "/admin/users/conflicts" },
+        { "id": "admin-access-requests", "type": "leaf", "label": "Access Requests", "path": "/admin/access-requests" },
+        
+        { "id": "admin-group-api-key", "type": "group-header", "label": "API Key Management" },
+        { "id": "admin-user-api-keys", "type": "leaf", "label": "User API Keys", "path": "/admin/api-keys/user" },
+        { "id": "admin-admin-api-keys", "type": "leaf", "label": "Administrator API Keys", "path": "/admin/api-keys/admin" },
+        
+        { "id": "admin-group-vuln-mgmt", "type": "group-header", "label": "Vulnerability Management" },
+        { "id": "admin-vuln-mgmt", "type": "leaf", "label": "Management", "path": "/admin/vulnerability/management" },
+        
+        { "id": "admin-group-cloud-sec", "type": "group-header", "label": "Cloud Security" },
+        { "id": "admin-cloud-profile", "type": "leaf", "label": "Profile", "path": "/admin/cloud/profile" },
+        { "id": "admin-cloud-integrations", "type": "leaf", "label": "Integrations", "path": "/admin/cloud/integrations" },
+        { "id": "admin-cloud-user-mgmt", "type": "leaf", "label": "User Management", "path": "/admin/cloud/user-management" },
+        { "id": "admin-cloud-sys-admin", "type": "leaf", "label": "System Administration", "path": "/admin/cloud/system-admin" },
+        { "id": "admin-cloud-iam", "type": "leaf", "label": "IAM Settings", "path": "/admin/cloud/iam" },
+        { "id": "admin-cloud-harvesting", "type": "leaf", "label": "Harvesting Strategies", "path": "/admin/cloud/harvesting" },
+        { "id": "admin-cloud-data-class", "type": "leaf", "label": "Data Classifications", "path": "/admin/cloud/data-classifications" },
+        { "id": "admin-cloud-diagnostics", "type": "leaf", "label": "Diagnostics", "path": "/admin/cloud/diagnostics" }
+      ]
+    }
+  ]
+}
