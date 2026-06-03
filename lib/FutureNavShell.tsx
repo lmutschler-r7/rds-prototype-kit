@@ -49,6 +49,18 @@ export const FutureNavShell: React.FC<ShellProps> = ({ children }) => {
     window.dispatchEvent(new Event('popstate'));
   };
 
+  const toggleThemeMode = (event: React.MouseEvent) => {
+    const currentThemeMode = window.localStorage.getItem('themeMode');
+    const nextThemeMode = currentThemeMode === 'dark' ? 'light' : 'dark';
+    window.localStorage.setItem('themeMode', nextThemeMode);
+    window.dispatchEvent(new CustomEvent('theme-mode-change', {
+      detail: {
+        mode: nextThemeMode,
+        origin: { x: event.clientX, y: event.clientY },
+      },
+    }));
+  };
+
   const toggleParent = (id: string) => {
     setExpandedParents(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -342,8 +354,10 @@ export const FutureNavShell: React.FC<ShellProps> = ({ children }) => {
             {logoSvgMarkup ? (
               <Box
                 component="span"
+                onClick={toggleThemeMode}
                 sx={{
                   display: 'inline-block',
+                  cursor: 'pointer',
                   '& svg': {
                     display: 'block',
                     height: '12px',
@@ -355,7 +369,8 @@ export const FutureNavShell: React.FC<ShellProps> = ({ children }) => {
             ) : (
               <img
                 src="/rapid7-logo.svg"
-                style={{ height: '12px', display: 'block' }}
+                style={{ height: '12px', display: 'block', cursor: 'pointer' }}
+                onClick={toggleThemeMode}
                 alt="Rapid7 Logo"
               />
             )}

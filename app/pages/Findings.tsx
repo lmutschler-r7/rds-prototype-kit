@@ -65,17 +65,75 @@ type FilterModelItemLike = {
   value?: unknown;
 };
 
-const getDisplayLabel = (type: FindingType): string => {
-  if (type === 'vulnerabilities') return 'Vulnerability Findings';
-  if (type === 'iocs') return 'IOC Findings';
-  return 'Misconfiguration Findings';
-};
-
 interface FilterState {
   cvss: number | null;
   riskScore: number | null;
   cisaKev: boolean | null;
 }
+
+interface IocFindingRow {
+  id: string;
+  value: string;
+  onAllowList: boolean;
+  iocType: string;
+  decayScore: number | null;
+  severity: 'Critical' | 'High' | 'Medium' | 'Low';
+  reportingFeed: string[];
+  tags: string[];
+}
+
+const IOC_VALUE_VARIANTS = [
+  '45.77.89.123',
+  'maliciousdomain.biz',
+  'http://badactor[.]org/login',
+  'sha256:ab3f...9c7d8',
+  'c2_payload.exe',
+  'attacker_support@protonmail.com',
+  '1BoatSLRHtKNngkdXEeobR76...',
+  'http://abc123xyz[.]onion',
+  'readme_for_unlock.txt',
+  '.locked123',
+  'AS13335'
+];
+
+const IOC_TYPE_VARIANTS = ['IP Address', 'Domain', 'URL', 'File Hash', 'File Name', 'Email Address', 'BTC Wallet', 'TOR Website', 'Ransom Note', 'Encryption Extension', 'ASN'];
+
+const IOC_REPORTING_FEEDS = [
+  ['OpenPhish', 'Rapid7 Labs'],
+  ['Rapid7 Labs'],
+  ['Rapid7 Lorelei Honeypots'],
+  ['US-CERT'],
+  ['Mandiant Intelligence'],
+  ['Enriched_doc_pv'],
+  ['IP range filter PV']
+];
+
+const IOC_TAG_VARIANTS = [
+  ['Installation', 'Bot'],
+  ['Phishing', 'Initial Access'],
+  ['Credential Access'],
+  ['Persistence'],
+  ['Lateral Movement'],
+  ['Exfiltration']
+];
+
+const getIocSeverity = (riskScore: number): IocFindingRow['severity'] => {
+  if (riskScore >= 800) return 'Critical';
+  if (riskScore >= 600) return 'High';
+  if (riskScore >= 350) return 'Medium';
+  return 'Low';
+};
+
+const mapFindingToIocRow = (row: FindingItem, index: number): IocFindingRow => ({
+  id: row.id,
+  value: IOC_VALUE_VARIANTS[index % IOC_VALUE_VARIANTS.length],
+  onAllowList: index % 7 === 0,
+  iocType: IOC_TYPE_VARIANTS[index % IOC_TYPE_VARIANTS.length],
+  decayScore: index % 5 === 3 || index % 5 === 4 ? null : Math.max(35, Math.min(95, 100 - Math.floor(row.riskScore / 12))),
+  severity: getIocSeverity(row.riskScore),
+  reportingFeed: IOC_REPORTING_FEEDS[index % IOC_REPORTING_FEEDS.length],
+  tags: IOC_TAG_VARIANTS[index % IOC_TAG_VARIANTS.length]
+});
 
 const renderCellBox = (justifyContent: 'flex-start' | 'center' | 'flex-end' = 'flex-start') => ({
   display: 'flex',
@@ -102,7 +160,7 @@ const renderLinkCell = (value: React.ReactNode) => (
 const renderBooleanIconCell = (value: boolean, iconMuted: string) => (
   <Box sx={renderCellBox('center')}>
     {value ? (
-      <CheckSuccessHealthy color="error" sx={{ width: '18px', height: '18px' }} />
+      <CheckSuccessHealthy color="success" sx={{ width: '18px', height: '18px' }} />
     ) : (
       <Clear sx={{ color: iconMuted, width: '18px', height: '18px' }} />
     )}
@@ -116,7 +174,28 @@ const createColumns = (theme: Theme): GridColDef<FindingItem>[] => [
     width: 170,
     align: 'left',
     headerAlign: 'left',
-    renderCell: (params: GridRenderCellParams<FindingItem, string>) => renderTextCell(params.value, theme.palette.text.primary, 'flex-start', 500)
+    renderCell: (params: GridRenderCellParams<FindingItem, string>) => {
+      if (params.row.type === 'vulnerabilities') {
+        return (
+          <Box
+            sx={{ ...renderCellBox('flex-start'), cursor: 'pointer' }}
+          >
+            <Link
+              href="#"
+              onClick={(event: React.MouseEvent) => {
+                event.preventDefault();
+                localStorage.setItem('selectedFindingId', params.row.id);
+                window.history.pushState({}, '', '/findings/detail');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+            >
+              {params.value}
+            </Link>
+          </Box>
+        );
+      }
+      return renderTextCell(params.value, theme.palette.text.primary, 'flex-start', 500);
+    }
   },
   {
     field: 'title',
@@ -200,6 +279,113 @@ const createColumns = (theme: Theme): GridColDef<FindingItem>[] => [
   }
 ];
 
+const createIocColumns = (theme: Theme): GridColDef<IocFindingRow>[] => [
+  {
+    field: 'value',
+    headerName: 'Value',
+    minWidth: 220,
+    flex: 1,
+    align: 'left',
+    headerAlign: 'left',
+    renderCell: (params: GridRenderCellParams<IocFindingRow, string>) => renderTextCell(params.value, theme.palette.text.primary)
+  },
+  {
+    field: 'onAllowList',
+    headerName: 'On Allow List',
+    width: 140,
+    align: 'center',
+    headerAlign: 'center',
+    renderCell: (params: GridRenderCellParams<IocFindingRow, boolean>) => renderBooleanIconCell(Boolean(params.value), theme.palette.error.main)
+  },
+  {
+    field: 'iocType',
+    headerName: 'Type',
+    width: 140,
+    align: 'left',
+    headerAlign: 'left',
+    renderCell: (params: GridRenderCellParams<IocFindingRow, string>) => renderTextCell(params.value, theme.palette.text.secondary)
+  },
+  {
+    field: 'decayScore',
+    headerName: 'Decay Score',
+    width: 130,
+    align: 'right',
+    headerAlign: 'right',
+    renderCell: (params: GridRenderCellParams<IocFindingRow, number | null>) => renderTextCell(params.value ?? '-', theme.palette.text.primary, 'flex-end')
+  },
+  {
+    field: 'severity',
+    headerName: 'Severity',
+    width: 130,
+    align: 'left',
+    headerAlign: 'left',
+    renderCell: (params: GridRenderCellParams<IocFindingRow, IocFindingRow['severity']>) => {
+      const severity = params.value ?? 'Low';
+      const colorMap: Record<IocFindingRow['severity'], 'error' | 'warning' | 'info'> = {
+        Critical: 'error',
+        High: 'warning',
+        Medium: 'warning',
+        Low: 'info'
+      };
+      return (
+        <Box sx={renderCellBox('flex-start')}>
+          <Chip size="small" label={severity} color={colorMap[severity]} />
+        </Box>
+      );
+    }
+  },
+  {
+    field: 'reportingFeed',
+    headerName: 'Reporting Feed',
+    minWidth: 230,
+    flex: 1,
+    align: 'left',
+    headerAlign: 'left',
+    renderCell: (params: GridRenderCellParams<IocFindingRow, string[]>) => (
+      <Box sx={renderCellBox('flex-start')}>
+        <Stack direction="row" spacing={0.75}>
+          {(params.value ?? []).slice(0, 2).map((feed) => (
+            <Chip key={`${params.row.id}-${feed}`} size="small" label={feed} variant="filled" />
+          ))}
+        </Stack>
+      </Box>
+    )
+  },
+  {
+    field: 'tags',
+    headerName: 'Tags',
+    minWidth: 220,
+    flex: 1,
+    align: 'left',
+    headerAlign: 'left',
+    renderCell: (params: GridRenderCellParams<IocFindingRow, string[]>) => (
+      <Box sx={renderCellBox('flex-start')}>
+        <Stack direction="row" spacing={0.75}>
+          {(params.value ?? []).slice(0, 2).map((tag) => (
+            <Chip key={`${params.row.id}-${tag}`} size="small" label={tag} variant="filled" />
+          ))}
+        </Stack>
+      </Box>
+    )
+  },
+  {
+    field: 'actions',
+    headerName: 'Actions',
+    width: 92,
+    align: 'right',
+    headerAlign: 'right',
+    sortable: false,
+    filterable: false,
+    renderCell: () => (
+      <Box sx={renderCellBox('flex-end')}>
+        <IconButton size="small" aria-label="More actions">
+          <Icons.MoreMenuElipsis />
+        </IconButton>
+      </Box>
+    )
+  }
+];
+
 const getFiltersFromModel = (filterModel: FilterModel): FilterState => {
   const state: FilterState = {
     cvss: null,
@@ -258,7 +444,10 @@ export const Findings: React.FC = () => {
     });
   }, [activeType, filters, searchQuery]);
 
+  const iocRows = useMemo(() => filteredRows.map(mapFindingToIocRow), [filteredRows]);
+
   const columns = useMemo<GridColDef<FindingItem>[]>(() => createColumns(theme), [theme]);
+  const iocColumns = useMemo<GridColDef<IocFindingRow>[]>(() => createIocColumns(theme), [theme]);
 
   const BatchButton = ({ selectedRows }: { selectedRows: string[] }) => (
     <Button
@@ -322,7 +511,7 @@ export const Findings: React.FC = () => {
       />
 
       {/* Summary KPIs */}
-      <Box mt="16px" mb="24px">
+      <Box mt="16px" mb="16px">
         <KpiContainer variant="CARD">
           {kpiItems.map((item) => (
             <Kpi key={item.label} value={item.value} Icon={item.icon} label={item.label} />
@@ -331,7 +520,7 @@ export const Findings: React.FC = () => {
       </Box>
 
       {/* Tabs */}
-      <Tabs sx={{ mb: '20px' }} value={currentTab} onChange={(_event: React.SyntheticEvent, value: number) => setCurrentTab(value)}>
+      <Tabs sx={{ mb: '16px' }} value={currentTab} onChange={(_event: React.SyntheticEvent, value: number) => setCurrentTab(value)}>
         <Tab label="Vulnerabilities" />
         <Tab label="IOCs" />
         <Tab label="Misconfigurations" />
@@ -350,8 +539,8 @@ export const Findings: React.FC = () => {
 
       {/* Results table */}
       <DataGridTable
-        columns={columns}
-        rows={filteredRows}
+        columns={activeType === 'iocs' ? iocColumns : columns}
+        rows={activeType === 'iocs' ? iocRows : filteredRows}
         totalCount={filteredRows.length}
         isClientSide
         isLoading={false}
@@ -359,6 +548,7 @@ export const Findings: React.FC = () => {
         onSearchChange={(value) => setSearchQuery(value)}
         getRowId={(row) => row.id}
         slots={{
+          customCountText: activeType === 'iocs' ? () => 'IOC Findings displayed' : undefined,
           batchActions: BatchButton,
           tableActions: TableActions
         }}

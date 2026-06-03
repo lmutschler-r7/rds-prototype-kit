@@ -12,6 +12,14 @@ Use this folder as the default Copilot steering source for page work.
 2. Audit prompt suffix:
 	Audit this page using `.ai-steering/page-rules-audit.md`.
 
+## Template Source
+1. Template definitions and component outlines live in `.ai-steering/page-templates.md`.
+2. Build and audit workflows must classify page type using `.ai-steering/page-templates.md` before applying rule checks.
+
+## Alignment Note
+1. Build, audit, and template guidance are aligned with implemented patterns from `Findings`, `Alerts`, `Response & Remediation`, and `VulnerabilityDetail`.
+2. If guidance appears to conflict during implementation, treat `.ai-steering/page-templates.md` as canonical and report the conflict in outputs.
+
 ## Non-Negotiables
 1. Prefer `@rapid7/rds` and `@rapid7/rds-labs` components over custom UI wrappers.
 2. Use theme tokens (`theme.palette.*`, `theme.shadows[]`) for visual primitives.

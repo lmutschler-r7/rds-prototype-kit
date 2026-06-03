@@ -5,16 +5,21 @@ Generate pages as a compiler-like pipeline, not freeform UI design.
 This project is prototype-first: prioritize visual direction, non-default component treatment, and fast iteration over production-hardening concerns.
 
 ## Build Sequence
-1. Resolve task intent and target page type.
+1. Resolve task intent and select template type using `.ai-steering/page-templates.md`.
 2. Define/confirm required contracts before coding.
 3. Build a page spec (or equivalent explicit plan).
-4. Validate component + token + styling-override + access + routing assumptions.
+4. Validate proposed structure against the selected template contract in `.ai-steering/page-templates.md`.
 5. Implement page.
 6. Run diagnostics and build.
 
+## Template Contract Source
+1. All template contracts live in `.ai-steering/page-templates.md`.
+2. Treat `.ai-steering/page-templates.md` as canonical for component outlines and template scope constraints.
+3. If build guidance here conflicts with `.ai-steering/page-templates.md`, follow `.ai-steering/page-templates.md` and report the conflict.
+
 ## Component Policy
 1. Use RDS and RDS-labs primitives first.
-2. For findings-style pages, default to:
+2. For listing pages, follow the `listing` contract in `.ai-steering/page-templates.md`, including:
    - `DetailsPageHeader`
    - `KpiContainer` + `Kpi`
    - `FilterBar`
@@ -26,6 +31,7 @@ This project is prototype-first: prioritize visual direction, non-default compon
    - Set `totalCount` to the displayed row set length (for example `filteredRows.length`) so toolbar result counts stay accurate.
    - Do not rely on MUI client-side `rowCount` warnings as a reason to remove `totalCount`; in this codebase `totalCount` is used for table title/toolbar count display.
    - Omit `checkboxSelectionVisibleOnly` prop in page code; DataGridTable wrapper manages this internally.
+   - Do not use the `title` prop in page implementations; rely on built-in toolbar/result context and slot-based count text where needed.
 7. Place top-level page actions in `DetailsPageHeader` action slots when the header is present.
    - Buttons in header slots must use `size="medium"` and include a related icon.
    - Icon selection:
@@ -33,6 +39,16 @@ This project is prototype-first: prioritize visual direction, non-default compon
      - Report/documentation actions: use `Reporting` (for report-specific create/generate workflows)
      - Refer to `.ai-steering/icon-reference.md` for additional icon guidance.
 8. For tab-based section layouts, use `Tabs` + `TabPanel` structure.
+9. Listing page implementation guidance (from `Findings`, `Alerts`, `Response & Remediation`):
+   - Use one parent `Stack spacing={2}` to enforce 16px rhythm between `FilterBar` and `DataGridTable`.
+   - Keep `DataGridTable` controls local via table `slots` (`tableActions`, `batchActions`) instead of external wrapper toolbars when feasible.
+   - Use deterministic filter-model parsing helpers for page-specific filter fields.
+10. Details page implementation guidance (from `VulnerabilityDetail`):
+   - Keep header-context metadata in `DetailsPageHeader` `slots.attributes`.
+   - Use `Attribute` from `@rapid7/rds` for header attribute rows and avoid ad-hoc `Stack`/`Typography` replacements.
+   - Keep title-adjacent status indicators (for example severity/CVSS chips, AI markers) in `DetailsPageHeader` `slots.tags`.
+   - For detail-property rows in content cards, prefer `Attribute` with explicit `labelWidth` and token-backed `AttributeRootProps`/`LabelProps`.
+   - For narrative intelligence content in details pages, `Card` with `variant="ai"` is the preferred optional treatment when AI-context content is present.
 
 ## Theming Policy
 1. In pages, use `useTheme<Theme>()`.

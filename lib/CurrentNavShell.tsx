@@ -90,6 +90,18 @@ export const CurrentNavShell: React.FC<ShellProps> = ({ children }) => {
     window.dispatchEvent(new Event('popstate'));
   };
 
+  const toggleThemeMode = (event: React.MouseEvent) => {
+    const currentThemeMode = window.localStorage.getItem('themeMode');
+    const nextThemeMode = currentThemeMode === 'dark' ? 'light' : 'dark';
+    window.localStorage.setItem('themeMode', nextThemeMode);
+    window.dispatchEvent(new CustomEvent('theme-mode-change', {
+      detail: {
+        mode: nextThemeMode,
+        origin: { x: event.clientX, y: event.clientY },
+      },
+    }));
+  };
+
   const theme = useTheme<Theme>();
   const selectedParent = workspaceItems.find((item) => item.id === openParentId && item.type === 'parent');
   const clickedItemIndex = workspaceItems.findIndex((item) => item.id === clickedItemId);
@@ -200,9 +212,11 @@ export const CurrentNavShell: React.FC<ShellProps> = ({ children }) => {
           }}
         >
           <Box
+            onClick={toggleThemeMode}
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
+              cursor: 'pointer',
               color: colors.textPrimary,
               lineHeight: 0,
               '& svg': {

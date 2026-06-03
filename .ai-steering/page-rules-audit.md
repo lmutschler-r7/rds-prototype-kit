@@ -5,26 +5,42 @@ Audit pages for prototype construction quality, component compliance, token use,
 Accessibility conformance is low-emphasis in this repository unless explicitly requested.
 
 ## Audit Order
-1. Validate imports and component choices.
-2. Validate token usage and styling sources.
-3. Validate visual override depth and coherence (anything beyond defaults).
-4. Validate persona/access behavior.
-5. Validate routing/data binding assumptions.
-6. Validate lightweight accessibility basics.
+1. Validate selected template matches implemented structure using `.ai-steering/page-templates.md`.
+2. Validate imports and component choices.
+3. Validate token usage and styling sources.
+4. Validate visual override depth and coherence (anything beyond defaults).
+5. Validate persona/access behavior.
+6. Validate routing/data binding assumptions.
+7. Validate lightweight accessibility basics.
+
+## Template Compliance
+1. Require explicit template classification in audit summary.
+2. Validate structure, scope, and required components against the selected template contract in `.ai-steering/page-templates.md`.
+3. Treat template contract mismatches as findings:
+   - High when required template components/scope are violated.
+   - Medium when starter outline intent is partially met but structure drifts.
+4. If any rule here conflicts with `.ai-steering/page-templates.md`, follow `.ai-steering/page-templates.md` and note conflict in findings.
 
 ## Component Compliance
 1. Flag disallowed imports.
 2. Flag components outside approved usage patterns.
 3. Flag custom replacements when RDS/RDS-labs component exists.
-4. When `DetailsPageHeader` is present, flag top-level page action controls rendered outside header action slots unless intentionally justified.
+4. Flag locally defined UI components for risk classification:
+   - Medium risk: local presentational components that do not clearly map to an available RDS/RDS-labs primitive.
+   - High risk: local components that replicate or wrap behavior available from an existing RDS/RDS-labs component without explicit justification.
+5. When `DetailsPageHeader` is present, flag top-level page action controls rendered outside header action slots unless intentionally justified.
    - Flag header action buttons that are not `size="medium"`.
    - Flag header action buttons that lack a related icon.
-5. Flag tab-based layouts that use conditional rendering instead of `TabPanel` components.
-6. Flag `variant="fullWidth"` on Tabs unless explicitly required.
-7. `DataGridTable` prop compliance:
+6. When `DetailsPageHeader` uses `slots.attributes`, require `Attribute` from `@rapid7/rds` for each attribute item.
+   - Flag ad-hoc attribute rows in header slots (for example `Stack` + `Typography`) when `Attribute` can represent the same content.
+7. When status chips, date metadata, or similar title-adjacent indicators are part of header context, require placement in `DetailsPageHeader` slots (`tags` or `attributes`) instead of rendering as separate blocks below the header unless explicitly justified.
+8. Flag tab-based layouts that use conditional rendering instead of `TabPanel` components.
+9. Flag `variant="fullWidth"` on Tabs unless explicitly required.
+10. `DataGridTable` prop compliance:
    - Flag missing `totalCount` when table toolbar/title result count should reflect current displayed rows.
    - In client-side pages, expect `totalCount` to match displayed row set length (for example filtered rows).
    - Flag explicit page-level `checkboxSelectionVisibleOnly` usage without pagination enabled (has no effect in client-side mode).
+   - Flag page-level usage of the `title` prop; table titles should not be set directly in page implementations.
 
 ## Token and Styling Compliance
 1. Flag raw visual color literals (`#`, `rgb`, `rgba`, `hsl`) unless explicitly waived.
@@ -83,3 +99,4 @@ Accessibility conformance is low-emphasis in this repository unless explicitly r
 6. Tab-based layout uses conditional rendering instead of TabPanel structure.
 7. Vertical spacing is inconsistent or deviates from 16px standard.
 8. Tabs lack `mb: '16px'` when serving as primary page section dividers.
+9. Header metadata/chips are split between header slots and extra blocks below header without explicit rationale.
