@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Avatar, Box, Stack, Theme, Typography, useTheme } from '@rapid7/rds';
+import { Box, Stack, Theme, Typography, useTheme } from '@rapid7/rds';
 import * as Icons from '@rapid7/icons';
 import { AccessRequest, Extensions, FeaturePreview, HelpInformation } from '@rapid7/icons';
 import { PreviousChevronLeftArrow } from '@rapid7/icons';
@@ -233,9 +233,23 @@ export const CurrentNavShell: React.FC<ShellProps> = ({ children }) => {
             {renderUtilityButton('extensions', <Extensions style={{ width: 24, height: 24, color: colors.textPrimary }} />)}
             {renderUtilityButton('access-request', <AccessRequest style={{ width: 24, height: 24, color: colors.textPrimary }} />)}
             {renderUtilityButton('help-information', <HelpInformation style={{ width: 24, height: 24, color: colors.textPrimary }} />)}
-            <Avatar size={24} placeholder="" onPointerEnterCapture={() => {}} onPointerLeaveCapture={() => {}}>
+            <Box
+              sx={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '999px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: colors.bgHover,
+                color: colors.textPrimary,
+                fontSize: '10px',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
               OP
-            </Avatar>
+            </Box>
           </Stack>
         </Box>
 

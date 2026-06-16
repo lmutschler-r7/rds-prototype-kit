@@ -282,10 +282,18 @@ const createCasesColumns = (theme: Theme): GridColDef<CaseItem>[] => [
     renderCell: (params: GridRenderCellParams<CaseItem, CaseSeverity>) => {
       const value = params.value ?? 'Low';
       const chipColor = value === 'Critical' || value === 'High' ? 'error' : value === 'Medium' ? 'warning' : 'success';
+      const impactIcon =
+        value === 'Critical'
+          ? <Icons.ImpactCritical fontSize="small" />
+          : value === 'High'
+          ? <Icons.ImpactHigh fontSize="small" />
+          : value === 'Medium'
+          ? <Icons.ImpactMedium fontSize="small" />
+          : <Icons.ImpactLow fontSize="small" />;
 
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', width: '100%' }}>
-          <Chip label={value} size="small" color={chipColor as 'error' | 'warning' | 'success'} />
+          <Chip label={value} size="small" color={chipColor as 'error' | 'warning' | 'success'} icon={impactIcon} />
         </Box>
       );
     }
@@ -296,7 +304,17 @@ const createCasesColumns = (theme: Theme): GridColDef<CaseItem>[] => [
     width: 120,
     align: 'left',
     headerAlign: 'left',
-    renderCell: (params: GridRenderCellParams<CaseItem, string>) => renderTextCell(params.value, theme)
+    renderCell: (params: GridRenderCellParams<CaseItem, string>) => {
+      const value = params.value ?? 'Active';
+      const chipColor = value === 'Active' ? 'warning' : 'success';
+      const impactIcon = value === 'Active' ? <Icons.ImpactMedium fontSize="small" /> : <Icons.ImpactLow fontSize="small" />;
+
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', width: '100%' }}>
+          <Chip label={value} size="small" color={chipColor} icon={impactIcon} />
+        </Box>
+      );
+    }
   },
   {
     field: 'assignee',

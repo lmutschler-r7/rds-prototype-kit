@@ -22,6 +22,16 @@ import * as Icons from '@rapid7/icons';
 import { CheckSuccessHealthy, Clear, CriticalAlert, Risk } from '@rapid7/icons';
 import { FindingItem, FindingType, mockFindingsData } from '../data/findingsData';
 
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({ children, index, value }) => {
+  return value === index ? <Box>{children}</Box> : null;
+};
+
 const tabTypes: FindingType[] = ['vulnerabilities', 'iocs', 'misconfigurations'];
 
 const filterSchema: FilterSchema[] = [
@@ -327,9 +337,15 @@ const createIocColumns = (theme: Theme): GridColDef<IocFindingRow>[] => [
         Medium: 'warning',
         Low: 'info'
       };
+      const iconMap: Record<IocFindingRow['severity'], React.ReactElement> = {
+        Critical: <Icons.ImpactCritical fontSize="small" />,
+        High: <Icons.ImpactHigh fontSize="small" />,
+        Medium: <Icons.ImpactMedium fontSize="small" />,
+        Low: <Icons.ImpactLow fontSize="small" />,
+      };
       return (
         <Box sx={renderCellBox('flex-start')}>
-          <Chip size="small" label={severity} color={colorMap[severity]} />
+          <Chip size="small" label={severity} color={colorMap[severity]} icon={iconMap[severity]} />
         </Box>
       );
     }
@@ -445,6 +461,7 @@ export const Findings: React.FC = () => {
   }, [activeType, filters, searchQuery]);
 
   const iocRows = useMemo(() => filteredRows.map(mapFindingToIocRow), [filteredRows]);
+  const activeRows = activeType === 'iocs' ? iocRows : filteredRows;
 
   const columns = useMemo<GridColDef<FindingItem>[]>(() => createColumns(theme), [theme]);
   const iocColumns = useMemo<GridColDef<IocFindingRow>[]>(() => createIocColumns(theme), [theme]);
@@ -526,33 +543,89 @@ export const Findings: React.FC = () => {
         <Tab label="Misconfigurations" />
       </Tabs>
 
-      {/* Filters */}
-      <Box mb="16px">
-        <FilterBar
-          filters={filterSchema}
-          logicalOperatorMode="BOTH"
-          onFilterModelChange={(model) => {
-            setFilters(getFiltersFromModel(model));
+      <TabPanel index={0} value={currentTab}>
+        {/* Filters */}
+        <Box mb="16px">
+          <FilterBar
+            filters={filterSchema}
+            logicalOperatorMode="BOTH"
+            onFilterModelChange={(model) => {
+              setFilters(getFiltersFromModel(model));
+            }}
+          />
+        </Box>
+
+        {/* Results table */}
+        <DataGridTable
+          columns={columns}
+          rows={activeRows}
+          totalCount={activeRows.length}
+          isClientSide
+          isLoading={false}
+          disableRowSelectionOnClick
+          onSearchChange={(value) => setSearchQuery(value)}
+          getRowId={(row) => row.id}
+          slots={{
+            batchActions: BatchButton,
+            tableActions: TableActions
           }}
         />
-      </Box>
+      </TabPanel>
 
-      {/* Results table */}
-      <DataGridTable
-        columns={activeType === 'iocs' ? iocColumns : columns}
-        rows={activeType === 'iocs' ? iocRows : filteredRows}
-        totalCount={filteredRows.length}
-        isClientSide
-        isLoading={false}
-        disableRowSelectionOnClick
-        onSearchChange={(value) => setSearchQuery(value)}
-        getRowId={(row) => row.id}
-        slots={{
-          customCountText: activeType === 'iocs' ? () => 'IOC Findings displayed' : undefined,
-          batchActions: BatchButton,
-          tableActions: TableActions
-        }}
-      />
+      <TabPanel index={1} value={currentTab}>
+        <Box mb="16px">
+          <FilterBar
+            filters={filterSchema}
+            logicalOperatorMode="BOTH"
+            onFilterModelChange={(model) => {
+              setFilters(getFiltersFromModel(model));
+            }}
+          />
+        </Box>
+
+        <DataGridTable
+          columns={iocColumns}
+          rows={activeRows}
+          totalCount={activeRows.length}
+          isClientSide
+          isLoading={false}
+          disableRowSelectionOnClick
+          onSearchChange={(value) => setSearchQuery(value)}
+          getRowId={(row) => row.id}
+          slots={{
+            customCountText: () => 'IOC Findings displayed',
+            batchActions: BatchButton,
+            tableActions: TableActions
+          }}
+        />
+      </TabPanel>
+
+      <TabPanel index={2} value={currentTab}>
+        <Box mb="16px">
+          <FilterBar
+            filters={filterSchema}
+            logicalOperatorMode="BOTH"
+            onFilterModelChange={(model) => {
+              setFilters(getFiltersFromModel(model));
+            }}
+          />
+        </Box>
+
+        <DataGridTable
+          columns={columns}
+          rows={activeRows}
+          totalCount={activeRows.length}
+          isClientSide
+          isLoading={false}
+          disableRowSelectionOnClick
+          onSearchChange={(value) => setSearchQuery(value)}
+          getRowId={(row) => row.id}
+          slots={{
+            batchActions: BatchButton,
+            tableActions: TableActions
+          }}
+        />
+      </TabPanel>
     </Box>
   );
 };

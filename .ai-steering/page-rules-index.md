@@ -2,6 +2,12 @@
 
 Use this folder as the default Copilot steering source for page work.
 
+## Repository Scope
+1. Treat the files in `.ai-steering/` as repository-shared guidance, not conversation-local context.
+2. Any user or agent pulling this repository should be able to follow these files without relying on prior chat history.
+3. When page conventions change during implementation, update the relevant `.ai-steering/` files so the repo remains self-describing.
+4. Do not keep critical page-building rules only in transient prompts, summaries, or chat context when they affect future contributors.
+
 ## Modes
 1. Build mode: follow `.ai-steering/page-rules-build.md`
 2. Audit mode: follow `.ai-steering/page-rules-audit.md`
@@ -18,7 +24,14 @@ Use this folder as the default Copilot steering source for page work.
 
 ## Alignment Note
 1. Build, audit, and template guidance are aligned with implemented patterns from `Findings`, `Alerts`, `Response & Remediation`, and `VulnerabilityDetail`.
-2. If guidance appears to conflict during implementation, treat `.ai-steering/page-templates.md` as canonical and report the conflict in outputs.
+2. Dashboard guidance is also aligned with the implemented `CommandHome` dashboard work, including token-family selection, KPI usage, and non-cartesian chart configuration rules.
+3. Dashboard guidance now also captures iteration learnings from the `CommandHome` refinement loop:
+	- card header standardization,
+	- DataGrid-in-card flattening,
+	- severity/status/priority chip+icon table semantics,
+	- explicit sticky/non-sticky tab behavior checks,
+	- and ECharts example-driven radar/funnel implementation checks.
+4. If guidance appears to conflict during implementation, treat `.ai-steering/page-templates.md` as canonical and report the conflict in outputs.
 
 ## Non-Negotiables
 1. Prefer `@rapid7/rds` and `@rapid7/rds-labs` components over custom UI wrappers.

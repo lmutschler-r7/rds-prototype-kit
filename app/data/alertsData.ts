@@ -18,7 +18,7 @@ export interface AlertItem {
 const sources = ['MS Defender', 'MDE', 'Okta', 'CrowdStrike', 'Palo Alto', 'Wiz', 'Rapid7'];
 const dispositions: AlertDisposition[] = ['Malicious', 'Benign', 'Undecided', 'Unknown'];
 const statuses: AlertStatus[] = ['Open', 'In Progress', 'Closed', 'Dismissed'];
-const priorities: AlertPriority[] = ['Critical', 'High', 'Medium', 'Low'];
+const priorityPool: AlertPriority[] = ['Critical', 'High', 'High', 'Medium', 'Medium', 'Medium', 'Low', 'Low'];
 
 const alertNames = [
   'Connection to a suspicious or malicious IP address',
@@ -33,14 +33,14 @@ const alertNames = [
   'Port scanning activity detected'
 ];
 
-export const mockAlertsData: AlertItem[] = Array.from({ length: 999 }, (_, i) => {
-  const priorityIndex = Math.floor(i / 250);
-  const statusIndex = Math.floor((i % 250) / 63);
+export const mockAlertsData: AlertItem[] = Array.from({ length: 142 }, (_, i) => {
+  const statusIndex = Math.floor((i % 80) / 20);
+  const priority = priorityPool[(i * 7) % priorityPool.length];
 
   return {
     id: `alert-${i + 1}`,
     name: alertNames[i % alertNames.length],
-    priority: priorities[Math.min(priorityIndex, 3)] as AlertPriority,
+    priority,
     alertRiskScore: Math.floor(Math.random() * 100),
     status: statuses[statusIndex],
     source: sources[Math.floor(Math.random() * sources.length)],

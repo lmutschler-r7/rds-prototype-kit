@@ -8,6 +8,7 @@ import { Box, CssBaseline, RDSThemeProvider, Typography } from '@rapid7/rds';
 // Add new page imports here
 import { CommandHome } from './pages/CommandHome';
 import { Alerts } from './pages/Alerts';
+import { AlertDetail } from './pages/AlertDetail';
 import { Findings } from './pages/Findings';
 import { ResponseRemediation } from './pages/ResponseRemediation';
 import { VulnerabilityDetail } from './pages/VulnerabilityDetail';
@@ -137,6 +138,8 @@ export const App = () => {
         return <CommandHome />;
       case '/alerts':
         return <Alerts />;
+      case '/alerts/detail':
+        return <AlertDetail />;
       case '/findings':
         return <Findings />;
         case '/findings/detail':

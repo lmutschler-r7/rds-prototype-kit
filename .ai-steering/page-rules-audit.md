@@ -41,6 +41,14 @@ Accessibility conformance is low-emphasis in this repository unless explicitly r
    - In client-side pages, expect `totalCount` to match displayed row set length (for example filtered rows).
    - Flag explicit page-level `checkboxSelectionVisibleOnly` usage without pagination enabled (has no effect in client-side mode).
    - Flag page-level usage of the `title` prop; table titles should not be set directly in page implementations.
+11. Dashboard card heading compliance:
+   - Flag dashboard chart/table cards that use ad-hoc title `Typography` blocks instead of `CardHeader` (or approved shared wrapper).
+12. KPI compliance:
+   - Flag KPI-like summary rows implemented as custom cards when `KpiContainer` + `Kpi` should be used.
+13. CTA compliance:
+   - Flag "Go to ..." buttons without trailing chevron `endIcon`.
+14. Severity/status/priority compliance:
+   - Flag table cells for severity/status/priority that do not render chip + impact icon.
 
 ## Token and Styling Compliance
 1. Flag raw visual color literals (`#`, `rgb`, `rgba`, `hsl`) unless explicitly waived.
@@ -61,6 +69,7 @@ Accessibility conformance is low-emphasis in this repository unless explicitly r
 10. Flag FilterBar/DataGridTable spacing if not enforced by either:
    - parent `Stack spacing={2}`
    - or one explicit 16px gap (`mb: '16px'` on FilterBar OR `mt: '16px'` on DataGridTable)
+11. For dashboard cards that embed `DataGridTable`, flag nested card chrome (border/shadow) when not flattened to integrate with the parent card.
 
 ## Access and Data Compliance
 1. Verify hidden fields/actions by persona are not rendered.
@@ -69,6 +78,31 @@ Accessibility conformance is low-emphasis in this repository unless explicitly r
 4. Verify table cell alignment standard is followed:
    - text/categorical values left-aligned and vertically centered
    - numeric values right-aligned and vertically centered
+
+## Dashboard-Specific Audit Checklist (Required When Template Is `dashboard`)
+1. Tabs and behavior:
+   - Verify tab labels/order match prompt requirements.
+   - Verify sticky vs non-sticky behavior of header/tab strip matches prompt requirements.
+2. Card headers:
+   - Verify chart/table cards use `CardHeader` with consistent spacing.
+3. KPI blocks:
+   - Verify KPI-like metrics use `KpiContainer` + `Kpi`.
+4. Chart configuration correctness:
+   - Verify non-cartesian charts do not include inherited cartesian axes.
+   - Verify requested source examples (if named in prompt) are reflected in option structure for target charts.
+5. Token mapping correctness:
+   - Severity charts use `semantic.status`.
+   - Category charts use ascending `dataViz.categorical` steps from `10`.
+6. Table semantics:
+   - Verify severity/status/priority columns use chip + impact icon.
+   - Verify dashboard card-contained tables flatten nested `DataGridTable` chrome.
+7. CTA pattern:
+   - Verify "Go to ..." actions include trailing chevron icons.
+8. Compliance-tab completeness (when present in scope):
+   - KPI region present.
+   - Trend chart present.
+   - Composition/distribution chart present.
+   - Actionable table/list present.
 
 ## Accessibility Compliance
 1. Treat accessibility checks as low-severity guidance in PoC mode.
@@ -89,6 +123,8 @@ Accessibility conformance is low-emphasis in this repository unless explicitly r
 2. Disallowed component/import path usage.
 3. Token policy violations without waiver.
 4. Missing critical routing/binding logic.
+5. Non-cartesian chart misconfiguration that can cause runtime errors (for example inherited cartesian axis config on funnel/radar/pie).
+6. Dashboard tab sticky behavior contradicts explicit prompt requirement.
 
 ## Pass-with-Review Triggers (Prototype Styling)
 1. Page is largely default RDS styling with minimal visual differentiation.
@@ -100,3 +136,5 @@ Accessibility conformance is low-emphasis in this repository unless explicitly r
 7. Vertical spacing is inconsistent or deviates from 16px standard.
 8. Tabs lack `mb: '16px'` when serving as primary page section dividers.
 9. Header metadata/chips are split between header slots and extra blocks below header without explicit rationale.
+10. Dashboard chart/table cards are inconsistent in heading model (mixed ad-hoc `Typography` and `CardHeader`) without explicit rationale.
+11. Dashboard table severity/status/priority semantics are inconsistent (some rows chip+icon, others plain text).
