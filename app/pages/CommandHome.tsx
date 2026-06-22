@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Avatar,
   Box,
   Card,
   CardHeader,
@@ -29,6 +30,7 @@ import { DataGridTable } from '@rapid7/rds-labs';
 import { getValue } from '@rapid7/rds/lib/esm/tokens';
 import {
   SubtleIcons,
+  BrandSecurityAlert,
   CancelClose,
   CheckSuccessHealthy,
   Clear,
@@ -47,6 +49,7 @@ import {
   Settings,
   Verified,
   Threat,
+  Target,
   ThreatCommand,
   Workflow,
 } from '@rapid7/icons';
@@ -1378,6 +1381,8 @@ export const CommandHome: React.FC = () => {
     ],
   };
 
+  // ─── AI Command Center ─────────────────────────────────────────────────────
+
   const renderExposureManagement = () => (
     <Box
       sx={{
@@ -2389,6 +2394,175 @@ export const CommandHome: React.FC = () => {
     );
   };
 
+  const renderAICommandCenter = () => {
+    const sectionLabelSx = {
+      color: theme.palette.text.secondary,
+      pt: '18px',
+      fontSize: '13px',
+      fontWeight: 500,
+      lineHeight: 1.4,
+      letterSpacing: '0.01em',
+    };
+
+    const aiFeatureCard = (
+      Icon: React.ElementType,
+      title: string,
+      category: string,
+      body: string,
+      primaryCta: { label: string; href?: string },
+      secondaryCta?: { label: string; href?: string },
+    ) => (
+      <Card sx={incidentCardSurface(theme)}>
+        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
+          <CardHeader
+            title={title}
+            subheader={category}
+            avatar={<Icon />}
+          />
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, flex: 1, mb: '8px' }}>
+            {body}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <Button variant="contained" size="medium" endIcon={<NextChevronRightArrow fontSize="small" />}>
+              {primaryCta.label}
+            </Button>
+            {secondaryCta && (
+              <Button variant="outlined" size="medium">
+                {secondaryCta.label}
+              </Button>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    );
+
+    return (
+      <Box sx={{ display: 'grid', gap: '32px' }}>
+
+        {/* Hero AI Card */}
+        <Card
+          variant="ai"
+          sx={{
+            color: 'rgb(0, 0, 0)',
+            boxShadow: 'rgba(31, 44, 54, 0.03) 0px 0.6px 0.8px 0px, rgba(31, 44, 54, 0.04) 0px 2.01px 2.68px 0px, rgba(31, 44, 54, 0.07) 0px 3px 12px 0px',
+            transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(36, 43, 46, 0.12)',
+            padding: '24px',
+            background: 'radial-gradient(121.29% 63.97% at 95.87% 105.11%, rgba(140, 127, 207, 0.15) 0%, rgba(140, 127, 207, 0) 100%), radial-gradient(112.73% 128.25% at -4.31% 3.64%, rgba(237, 124, 79, 0.15) 0%, rgba(237, 124, 79, 0) 100%)',
+          }}
+        >
+          <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap' }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="h1" sx={{ fontWeight: 700, mb: '12px', color: theme.palette.text.primary }}>
+                Securing your organization with AI, never exposing it
+              </Typography>
+              <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: '20px', maxWidth: 560 }}>
+                At Rapid7, we recognize AI&apos;s potential to strengthen your security posture, but we&apos;re equally aware of the risks it can introduce. We commit to advancing AI features in a responsible way, ensuring each capability delivers clear value. We rely exclusively on trusted, tested LLMs, and our TRiSM framework promises that your data will never be used to train our models or be shared with third parties.
+              </Typography>
+              <Button variant="contained" size="medium">Learn More about TRISM</Button>
+            </Box>
+            <Box
+              component="img"
+              src="/ai-brain.png"
+              alt="AI Security Illustration"
+              sx={{ width: 200, height: 'auto', flexShrink: 0, display: { xs: 'none', md: 'block' } }}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Cloud Security section */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '140px 1fr' }, gap: '16px', alignItems: 'start' }}>
+          <Typography variant="body2" sx={sectionLabelSx}>Manage AI Risk</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: '16px' }}>
+            {aiFeatureCard(
+              SubtleIcons.CloudSecuritySubtle,
+              'Strengthen AI/ML compliance in the cloud',
+              'Cloud Security • Manage AI Risk',
+              "Rapid7's proprietary AI/ML Security Best Practices compliance pack empowers organizations to confidently innovate in the cloud, delivering security-first compliance aligned with emerging AI governance standards.",
+              { label: 'Configure Settings' },
+              { label: 'View Pack Details' },
+            )}
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '140px 1fr' }, gap: '16px', alignItems: 'start' }}>
+          <Typography variant="body2" sx={sectionLabelSx}>Defend with AI</Typography>
+          <Box sx={{ display: 'grid', gap: '16px' }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: '16px' }}>
+              {aiFeatureCard(
+                SubtleIcons.VulnerabilityManagementSubtle,
+                'Fill CVSS scoring gaps with AI-powered predictions',
+                'Exposure Management',
+                'Apply an AI predicted CVSS score to vulnerabilities that don’t currently have them.',
+                { label: 'Read the Docs' },
+                { label: 'Read the Blog' },
+              )}
+              {aiFeatureCard(
+                SubtleIcons.VulnerabilityManagementSubtle,
+                'AI-Generated Risk Intelligence',
+                'Exposure Management',
+                'Turn complex remediation data into clear, actionable insights. AI-Generated Risk Intelligence combines exploit signals, business context, and vulnerability data to provide remediation summaries with clear guidance.',
+                { label: 'Go to Remediation Hub' },
+                { label: 'Read the Blog' },
+              )}
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: '16px' }}>
+              {aiFeatureCard(
+                SubtleIcons.CloudSecuritySubtle,
+                'AI Analysis for Container Runtime Findings',
+                'Cloud Security',
+                'Understand container runtime detection findings faster with AI-generated analysis and guided remediation. Get clear summaries of attack behavior, impacted resources, and recommended actions so you can investigate and respond with confidence.',
+                { label: 'Go to Detection Findings' },
+                { label: 'Read the Blog' },
+              )}
+            </Box>
+          </Box>
+        </Box>
+
+        {/* AI-Powered SOC */}
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>AI-Powered SOC</Typography>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '140px 1fr' }, gap: '16px', alignItems: 'start' }}>
+          <Typography variant="body2" sx={sectionLabelSx}>Manage AI Risk</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: '16px' }}>
+            {aiFeatureCard(
+              SubtleIcons.SIEMSubtle,
+              'D&R Shadow AI Dashboard',
+              'Detection & Response',
+              'Monitor and detect unapproved AI domains within your network.',
+              { label: 'Read the Blog' },
+            )}
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '140px 1fr' }, gap: '16px', alignItems: 'start' }}>
+          <Typography variant="body2" sx={sectionLabelSx}>Defend with AI</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: '16px' }}>
+            {aiFeatureCard(
+              SubtleIcons.SIEMSubtle,
+              'Agentic AI Alert Enrichment',
+              'Detection & Response',
+              "Gain additional context on alerts, leveraging Agentic AI to collect data from logs and other sources. Our Agentic AI uses the OSCAR framework to enrich alerts, enabling you to triage with confidence.",
+              { label: 'Read the Blog' },
+            )}
+            {aiFeatureCard(
+              SubtleIcons.SIEMSubtle,
+              'AI Alert Triage',
+              'Detection & Response',
+              'Reduce the alert queue with AI-suggested dispositions for alerts, based on IOCs and other alert data.',
+              { label: 'Go to Alerts' },
+              { label: 'Read the Blog' },
+            )}
+          </Box>
+        </Box>
+
+      </Box>
+    );
+  };
+
   return (
     <Box>
       <Box mb="24px">
@@ -2402,9 +2576,6 @@ export const CommandHome: React.FC = () => {
         >
           Command Home
         </Typography>
-        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: '2px' }}>
-          Welcome back. Select an administrative or cloud module from the sidebar to begin analyzing telemetry.
-        </Typography>
       </Box>
 
       <Tabs sx={{ mb: '16px' }} value={activeTab} onChange={(_event: React.SyntheticEvent, value: number) => setActiveTab(value)}>
@@ -2412,12 +2583,14 @@ export const CommandHome: React.FC = () => {
         <Tab label="Incident Command" />
         <Tab label="Compliance" />
         <Tab label="Coverage Matrix" />
+        <Tab label="AI Command Center" />
       </Tabs>
 
       <TabPanel index={0} value={activeTab}>{renderExposureManagement()}</TabPanel>
       <TabPanel index={1} value={activeTab}>{renderIncidentCommand()}</TabPanel>
       <TabPanel index={2} value={activeTab}>{renderCompliance()}</TabPanel>
       <TabPanel index={3} value={activeTab}>{renderCoverageMatrix()}</TabPanel>
+      <TabPanel index={4} value={activeTab}>{renderAICommandCenter()}</TabPanel>
     </Box>
   );
 };
