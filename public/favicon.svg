@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Rapid7 Bullet">
+  <style>
+    :root { color: #000; }
+    @media (prefers-color-scheme: dark) {
+      :root { color: #fff; }
+    }
+  </style>
+  <path
+    fill="currentColor"
+    d="M15.356 4.453q2.99 0 4.828 2.18T22.023 12q0 3.188-1.908 5.367-1.908 2.18-4.897 2.18h-1.747l4.46-11.906h-8.46l-.735 3.328h4.275L9.61 19.547H2.437q1.517-1.454 2.62-3.961 1.104-2.508 1.104-4.617v-.188q0-1.36-.598-3.023-.597-1.665-1.425-2.695-.23-.282-.506-.61z"
+  />
+</svg>
