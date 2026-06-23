@@ -6,30 +6,49 @@ import {
   CardHeader,
   CardContent,
   Button,
+  Checkbox,
   Chip,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   GridColDef,
   GridRenderCellParams,
+  IconButton,
   Kpi,
   KpiContainer,
+  LinearProgress,
+  Menu,
+  MenuItem,
   Tab,
   Tabs,
   Theme,
+  Tooltip,
   Typography,
   useTheme,
 } from '@rapid7/rds';
 import { DataGridTable } from '@rapid7/rds-labs';
 import { getValue } from '@rapid7/rds/lib/esm/tokens';
 import {
+  SubtleIcons,
   BrandSecurityAlert,
+  CancelClose,
+  CheckSuccessHealthy,
+  Clear,
   CriticalAlert,
+  CyberGRC,
+  HelpInformation,
   ImpactCritical,
   ImpactHigh,
   ImpactLow,
   ImpactMedium,
+  InformationHint,
   NextChevronRightArrow,
   Risk,
   SecurityShield,
-  SubtleIcons,
+  SensitiveData,
+  Settings,
+  Verified,
+  Threat,
   Target,
   ThreatCommand,
   Workflow,
@@ -66,16 +85,6 @@ const DashboardCardHeader: React.FC<DashboardCardHeaderProps> = ({ title, action
     avatar={avatar}
     action={action}
     sx={{ px: 0, pt: 0, pb: '8px' }}
-    slotProps={{
-      title: {
-        variant: 'subtitle1',
-        sx: { color: 'text.primary', fontWeight: 600 },
-      },
-      subheader: {
-        variant: 'body2',
-        sx: { color: 'text.secondary' },
-      },
-    }}
   />
 );
 
@@ -266,6 +275,126 @@ const complianceKpis = [
 
 const complianceFrameworkLabels = ['CIS', 'DISA STIG', 'GDPR', 'HIPPA'];
 
+// ─── Coverage Matrix ────────────────────────────────────────────────────────
+
+type ProductName =
+  | 'Surface Command'
+  | 'Vulnerability Management'
+  | 'Cloud Security'
+  | 'SIEM'
+  | 'Application Security'
+  | 'Automation'
+  | 'Digital Risk Protection'
+  | 'Managed Services'
+  | 'Cyber GRC'
+  | 'DSPM';
+
+type NistFunction = 'GOVERN' | 'IDENTIFY' | 'PROTECT' | 'DETECT' | 'RESPOND' | 'RECOVER';
+type AssetType = 'DEVICES' | 'SOFTWARE' | 'NETWORK' | 'USERS' | 'DATA' | 'DOCUMENTATION';
+
+const NIST_FUNCTIONS: NistFunction[] = ['GOVERN', 'IDENTIFY', 'PROTECT', 'DETECT', 'RESPOND', 'RECOVER'];
+const ASSET_TYPES: AssetType[] = ['DEVICES', 'SOFTWARE', 'NETWORK', 'USERS', 'DATA', 'DOCUMENTATION'];
+
+interface CoverageProduct {
+  name: ProductName;
+  defaultLicensed: boolean;
+}
+
+type CoverageWeights = Partial<Record<ProductName, number>>;
+
+const coverageProducts: CoverageProduct[] = [
+  { name: 'Surface Command', defaultLicensed: true },
+  { name: 'Vulnerability Management', defaultLicensed: true },
+  { name: 'Cloud Security', defaultLicensed: false },
+  { name: 'SIEM', defaultLicensed: true },
+  { name: 'Application Security', defaultLicensed: false },
+  { name: 'Automation', defaultLicensed: true },
+  { name: 'Digital Risk Protection', defaultLicensed: true },
+  { name: 'Managed Services', defaultLicensed: false },
+  { name: 'Cyber GRC', defaultLicensed: false },
+  { name: 'DSPM', defaultLicensed: false },
+];
+
+const productIcons: Record<ProductName, React.ElementType> = {
+  'Surface Command': SubtleIcons.AttackSurfaceManagementSubtle,
+  'Vulnerability Management': SubtleIcons.VulnerabilityManagementSubtle,
+  'Cloud Security': SubtleIcons.CloudSecuritySubtle,
+  SIEM: SubtleIcons.SIEMSubtle,
+  'Application Security': SubtleIcons.ApplicationSecuritySubtle,
+  Automation: SubtleIcons.AutomationSubtle,
+  'Digital Risk Protection': SubtleIcons.DigitalRiskProtectionSubtle,
+  'Managed Services': SubtleIcons.ManagedServicesSubtle,
+  'Cyber GRC': CyberGRC,
+  DSPM: HelpInformation,
+};
+
+const productDescriptions: Record<ProductName, string> = {
+  'Surface Command': 'Maps external attack surface to discover and prioritize exposed assets.',
+  'Vulnerability Management': 'Finds vulnerabilities across assets and prioritizes remediation by risk.',
+  'Cloud Security': 'Continuously assesses cloud configurations and runtime posture for drift and risk.',
+  SIEM: 'Correlates telemetry to detect threats and accelerate investigation workflows.',
+  'Application Security': 'Identifies weaknesses in application code and dependencies before exploitation.',
+  Automation: 'Automates enrichment and response workflows to reduce manual analyst effort.',
+  'Digital Risk Protection': 'Monitors external digital channels for impersonation, leaks, and abuse.',
+  'Managed Services': 'Extends team capacity with expert-led monitoring, detection, and response operations.',
+  'Cyber GRC': 'Aligns controls to frameworks and tracks governance, risk, and compliance maturity.',
+  DSPM: 'Discovers and classifies sensitive data to improve protection and policy enforcement.',
+};
+
+// null = N/A (no product covers this combination)
+const coverageMap: Record<AssetType, Record<NistFunction, CoverageWeights | null>> = {
+  DEVICES: {
+    GOVERN: { 'Cyber GRC': 100 },
+    IDENTIFY: { 'Vulnerability Management': 50, 'Surface Command': 25, SIEM: 25 },
+    PROTECT: { 'Vulnerability Management': 25, SIEM: 25, Automation: 25, 'Cloud Security': 25 },
+    DETECT: { SIEM: 60, Automation: 40 },
+    RESPOND: { SIEM: 35, Automation: 30, 'Digital Risk Protection': 20, 'Managed Services': 15 },
+    RECOVER: null,
+  },
+  SOFTWARE: {
+    GOVERN: { 'Cyber GRC': 100 },
+    IDENTIFY: { 'Vulnerability Management': 50, 'Surface Command': 25, SIEM: 25 },
+    PROTECT: { 'Vulnerability Management': 40, SIEM: 30, Automation: 30 },
+    DETECT: { SIEM: 60, Automation: 40 },
+    RESPOND: { SIEM: 35, Automation: 30, 'Digital Risk Protection': 20, 'Managed Services': 15 },
+    RECOVER: null,
+  },
+  NETWORK: {
+    GOVERN: { 'Cyber GRC': 100 },
+    IDENTIFY: { 'Vulnerability Management': 50, 'Surface Command': 25, SIEM: 25 },
+    PROTECT: { 'Vulnerability Management': 25, SIEM: 25, Automation: 25, 'Cloud Security': 25 },
+    DETECT: { SIEM: 60, Automation: 40 },
+    RESPOND: { SIEM: 35, Automation: 30, 'Digital Risk Protection': 20, 'Managed Services': 15 },
+    RECOVER: null,
+  },
+  USERS: {
+    GOVERN: { 'Cyber GRC': 100 },
+    IDENTIFY: { 'Vulnerability Management': 50, 'Surface Command': 25, SIEM: 25 },
+    PROTECT: { SIEM: 50, Automation: 50 },
+    DETECT: { SIEM: 60, Automation: 40 },
+    RESPOND: { SIEM: 35, Automation: 30, 'Digital Risk Protection': 20, 'Managed Services': 15 },
+    RECOVER: null,
+  },
+  DATA: {
+    GOVERN: { 'Cyber GRC': 100 },
+    IDENTIFY: { 'Cloud Security': 50, DSPM: 50 },
+    PROTECT: { 'Cloud Security': 50, DSPM: 50 },
+    DETECT: { SIEM: 60, Automation: 40 },
+    RESPOND: { SIEM: 45, Automation: 25, 'Digital Risk Protection': 15, 'Managed Services': 15 },
+    RECOVER: null,
+  },
+  DOCUMENTATION: {
+    GOVERN: { 'Cyber GRC': 100 },
+    IDENTIFY: null,
+    PROTECT: { DSPM: 50, 'Cyber GRC': 50 },
+    DETECT: { DSPM: 100 },
+    RESPOND: { SIEM: 40, Automation: 30, 'Managed Services': 30 },
+    RECOVER: null,
+  },
+};
+
+// ─── End Coverage Matrix static data ────────────────────────────────────────
+
 interface DetectionRuleRow {
   id: string;
   rule: string;
@@ -332,6 +461,34 @@ const getPriorityChipIcon = (value: PriorityLevel): React.ReactElement => {
 export const CommandHome: React.FC = () => {
   const theme = useTheme<Theme>();
   const [activeTab, setActiveTab] = useState(0);
+  const [licensedProducts, setLicensedProducts] = useState<Set<ProductName>>(
+    () => new Set(coverageProducts.filter((p) => p.defaultLicensed).map((p) => p.name)),
+  );
+  const [isCoverageDialogOpen, setIsCoverageDialogOpen] = useState(false);
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState<HTMLElement | null>(null);
+  const [showProductAvatars, setShowProductAvatars] = useState(true);
+  const [showCoverageState, setShowCoverageState] = useState(true);
+  const [showPercentageCoverage, setShowPercentageCoverage] = useState(true);
+
+  const toggleProduct = (name: ProductName) => {
+    setLicensedProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  const toggleSettingsMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setSettingsAnchorEl((prev) => (prev ? null : event.currentTarget));
+  };
+
+  const closeSettingsMenu = () => {
+    setSettingsAnchorEl(null);
+  };
   const tokenTheme = theme.palette as Theme['palette'] & { brand: 'Original' | 'Callisto'; mode: 'light' | 'dark' };
   const semanticTokens = getValue('semantic', tokenTheme.brand, tokenTheme.mode);
   const dataVizTokens = getValue('dataViz', tokenTheme.brand, tokenTheme.mode);
@@ -1694,6 +1851,561 @@ export const CommandHome: React.FC = () => {
     </Box>
   );
 
+  const renderCoverageMatrix = () => {
+    const clampPercentage = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
+
+    const getCoverage = (asset: AssetType, nist: NistFunction): number | null => {
+      const cellWeights = coverageMap[asset][nist];
+      if (cellWeights === null) return null;
+
+      let total = 0;
+      Object.entries(cellWeights).forEach(([productName, weight]) => {
+        if (licensedProducts.has(productName as ProductName)) {
+          total += weight ?? 0;
+        }
+      });
+
+      return clampPercentage(total);
+    };
+
+    const getCoverageGainForProduct = (product: ProductName, asset: AssetType, nist: NistFunction): number => {
+      const cellWeights = coverageMap[asset][nist];
+      if (cellWeights === null) return 0;
+
+      const currentCoverage = getCoverage(asset, nist) ?? 0;
+      const nextCoverage = clampPercentage(currentCoverage + (cellWeights[product] ?? 0));
+      return nextCoverage - currentCoverage;
+    };
+
+    let applicableCells = 0;
+    let cellsWithCoverage = 0;
+    let coverageSum = 0;
+
+    ASSET_TYPES.forEach((asset) => {
+      NIST_FUNCTIONS.forEach((nist) => {
+        const cov = getCoverage(asset, nist);
+        if (cov !== null) {
+          applicableCells++;
+          coverageSum += cov;
+          if (cov > 0) cellsWithCoverage++;
+        }
+      });
+    });
+
+    const avgCoverage = applicableCells > 0 ? Math.round(coverageSum / applicableCells) : 0;
+
+    const recommendations = coverageProducts
+      .filter((p) => !licensedProducts.has(p.name))
+      .map((p) => {
+        let newCellsGained = 0;
+        let improvedCells = 0;
+        let pointsGained = 0;
+
+        ASSET_TYPES.forEach((asset) => {
+          NIST_FUNCTIONS.forEach((nist) => {
+            const gain = getCoverageGainForProduct(p.name, asset, nist);
+            const currentCoverage = getCoverage(asset, nist);
+
+            if (currentCoverage !== null && gain > 0) {
+              improvedCells++;
+              pointsGained += gain;
+
+              if (currentCoverage === 0) {
+                newCellsGained++;
+              }
+            }
+          });
+        });
+
+        return { ...p, improvedCells, newCellsGained, pointsGained };
+      })
+      .filter((p) => p.improvedCells > 0)
+      .sort((a, b) => b.pointsGained - a.pointsGained || b.newCellsGained - a.newCellsGained || b.improvedCells - a.improvedCells);
+
+    const getCellStyle = (coverage: number | null) => {
+      if (coverage === null) {
+        return {
+          bgcolor: `${statusTokens.veryLow.main}1a`,
+          borderColor: `${statusTokens.veryLow.main}66`,
+          textColor: theme.palette.text.primary,
+          barColor: 'transparent',
+        };
+      }
+      if (coverage === 0) {
+        return {
+          bgcolor: `${statusTokens.critical.main}1a`,
+          borderColor: `${statusTokens.critical.main}66`,
+          textColor: theme.palette.text.primary,
+          barColor: statusTokens.critical.main,
+        };
+      }
+      if (coverage === 100) {
+        return {
+          bgcolor: `${statusTokens.healthy.main}1a`,
+          borderColor: `${statusTokens.healthy.main}66`,
+          textColor: theme.palette.text.primary,
+          barColor: statusTokens.healthy.main,
+        };
+      }
+      return {
+        bgcolor: `${statusTokens.medium.main}1a`,
+        borderColor: `${statusTokens.medium.main}66`,
+        textColor: theme.palette.text.primary,
+        barColor: statusTokens.medium.main,
+      };
+    };
+
+    return (
+      <Box sx={{ display: 'grid', gap: '16px' }}>
+        {/* Coverage Adjustments Info Card */}
+        <Card sx={{ boxShadow: theme.shadows[1] }}>
+          <CardHeader title="Coverage Adjustments" subheader="Reductions when infrastructure is incomplete." />
+          <CardContent>
+            <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px', bgcolor: theme.palette.background.paper, overflowX: 'auto' }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1fr 1.3fr', px: '16px', py: '8px', borderBottom: `1px solid ${theme.palette.divider}`, minWidth: '600px' }}>
+                {['COMPONENT', 'PRODUCT AFFECTED', 'SCOPE', 'REDUCTION'].map((h) => (
+                  <Typography key={h} variant="overline" sx={{ color: theme.palette.text.secondary }}>{h}</Typography>
+                ))}
+              </Box>
+              {[
+                { component: 'Scan engines', product: 'insightVM', scope: 'All cells', reduction: '-25%' },
+                { component: 'Collectors', product: 'insightIDR', scope: 'All cells', reduction: '-50%' },
+                { component: 'Network sensors', product: 'insightIDR', scope: 'All cells', reduction: '-25%' },
+                { component: 'Honeypots', product: 'insightIDR', scope: 'All cells', reduction: '-10%' },
+                { component: 'Orchestrator', product: 'insightIDR', scope: 'DETECT only', reduction: '-10%' },
+                { component: 'SC connectors < 5', product: 'Surface Command', scope: 'All cells', reduction: '-50%' },
+                { component: 'No event sources', product: 'insightIDR', scope: 'All cells', reduction: '-75%' },
+                { component: '< 5 event sources', product: 'insightIDR', scope: 'All cells', reduction: '-50%' },
+                { component: 'Stale / offline agents', product: 'insightIDR', scope: 'All cells', reduction: '-10% per 10% unhealthy' },
+                { component: 'No ICON workflows', product: 'insightIDR', scope: 'DETECT only', reduction: '-10%' },
+              ].map((row) => (
+                <Box key={row.component} sx={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1fr 1.3fr', px: '16px', py: '10px', borderBottom: `1px solid ${theme.palette.divider}`, '&:last-child': { borderBottom: 'none' }, minWidth: '600px' }}>
+                  <Typography variant="body2">{row.component}</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{row.product}</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{row.scope}</Typography>
+                  <Typography variant="body2" sx={{ color: statusTokens.critical.main, fontWeight: 600 }}>{row.reduction}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gap: '16px',
+            gridTemplateColumns: { xs: '1fr', xl: '1fr 3fr' },
+            alignItems: 'start',
+          }}
+        >
+          {/* Licensed Products panel */}
+          <Card sx={incidentCardSurface(theme)}>
+            <CardHeader
+              title="Licensed Products"
+              subheader="Toggle products to simulate licensing scenarios and see how your coverage score changes."
+            />
+            <CardContent sx={{ pt: 0, pb: '16px' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                {coverageProducts.map((product) => {
+                  const ProductIcon = productIcons[product.name];
+                  return (
+                    <Box
+                      key={product.name}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        py: '6px',
+                      }}
+                    >
+                    <Checkbox
+                      size="small"
+                      checked={licensedProducts.has(product.name)}
+                      onChange={() => toggleProduct(product.name)}
+                      sx={{ p: '2px', mr: '8px' }}
+                    />
+                    <ProductIcon
+                      fontSize="small"
+                      sx={{
+                        mr: '4px',
+                        flexShrink: 0,
+                        color: theme.palette.text.primary,
+                        '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
+                        '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
+                      }}
+                    />
+                    <Typography variant="body2" sx={{ flex: 1, color: theme.palette.text.primary }}>
+                      {product.name}
+                    </Typography>
+                    {product.defaultLicensed && (
+                      <Chip icon={<Verified fontSize="small" />} label="Licensed" size="nano" />
+                    )}
+                  </Box>
+                  );
+                })}
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Box sx={{ display: 'grid', gap: '16px' }}>
+            <KpiContainer variant="CARD">
+              <Kpi value={licensedProducts.size} Icon={<ThreatCommand />} label="Products Licensed" />
+              <Kpi value={avgCoverage} Icon={<Workflow />} label="Coverage Score" />
+              <Kpi value={cellsWithCoverage} Icon={<CheckSuccessHealthy />} label="Applicable Cells Covered" />
+              <Kpi value={avgCoverage} Icon={<Workflow />} label="Avg Coverage Weight" />
+            </KpiContainer>
+
+            {/* Matrix card */}
+            <Card sx={incidentCardSurface(theme)}>
+              <CardContent>
+                <DashboardCardHeader
+                  title="Coverage Matrix"
+                  subheader="Defender coverage across the six NIST Cybersecurity Framework functions and the CIS Controls v8 asset types, scored against the Rapid7 products you’re licensed for."
+                  action={(
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Tooltip title="Info" placement="top" arrow>
+                        <IconButton aria-label="matrix info" onClick={() => setIsCoverageDialogOpen(true)} size="small">
+                          <InformationHint fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Settings" placement="top" arrow>
+                        <IconButton
+                          aria-controls={settingsAnchorEl ? 'coverage-matrix-settings' : undefined}
+                          aria-expanded={settingsAnchorEl ? 'true' : undefined}
+                          aria-haspopup="true"
+                          aria-label="matrix settings"
+                          onClick={toggleSettingsMenu}
+                          size="small"
+                        >
+                          <Settings fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                />
+                <Menu
+                  anchorEl={settingsAnchorEl}
+                  id="coverage-matrix-settings"
+                  MenuListProps={{ dense: true }}
+                  onClose={closeSettingsMenu}
+                  open={Boolean(settingsAnchorEl)}
+                >
+                  <MenuItem onClick={() => setShowProductAvatars((prev) => !prev)} sx={{ justifyContent: 'flex-start' }}>
+                    <Checkbox checked={showProductAvatars} size="small" />
+                    <Typography variant="body2" sx={{ textAlign: 'left' }}>Show products</Typography>
+                  </MenuItem>
+                  <MenuItem onClick={() => setShowCoverageState((prev) => !prev)} sx={{ justifyContent: 'flex-start' }}>
+                    <Checkbox checked={showCoverageState} size="small" />
+                    <Typography variant="body2" sx={{ textAlign: 'left' }}>Show coverage</Typography>
+                  </MenuItem>
+                </Menu>
+                <Box sx={{ overflowX: 'visible', mt: '8px' }}>
+                  <Box sx={{ minWidth: '600px' }}>
+                    {/* Column headers */}
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: '130px repeat(6, 1fr)',
+                        gap: '6px',
+                        mb: '6px',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Box />
+                      {NIST_FUNCTIONS.map((fn) => (
+                        <Typography
+                          key={fn}
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            textAlign: 'center',
+                            letterSpacing: '0.06em',
+                            display: 'block',
+                          }}
+                        >
+                          {`${fn.charAt(0)}${fn.slice(1).toLowerCase()}`}
+                        </Typography>
+                      ))}
+                    </Box>
+
+                    {/* Asset type rows */}
+                    {ASSET_TYPES.map((asset) => (
+                      <Box
+                        key={asset}
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: '130px repeat(6, 1fr)',
+                          gap: '6px',
+                          mb: '6px',
+                          alignItems: 'stretch',
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: theme.palette.text.secondary,
+                              letterSpacing: '0.06em',
+                              textAlign: 'right',
+                              pr: '16px',
+                            }}
+                          >
+                            {`${asset.charAt(0)}${asset.slice(1).toLowerCase()}`}
+                          </Typography>
+                        </Box>
+                        {NIST_FUNCTIONS.map((nist) => {
+                          const coverage = getCoverage(asset, nist);
+                          const style = getCellStyle(coverage);
+                          const mappedProducts = coverageMap[asset][nist] ? (Object.keys(coverageMap[asset][nist] as CoverageWeights) as ProductName[]) : [];
+                          const isCovered = (coverage ?? 0) > 0;
+
+                          return coverage === null ? (
+                            <Card
+                              key={nist}
+                              variant="outlined"
+                              sx={{
+                                bgcolor: style.bgcolor,
+                                borderColor: style.borderColor,
+                                borderRadius: '8px',
+                                boxShadow: theme.shadows[1],
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: 'auto',
+                                px: '10px',
+                                py: '8px',
+                                overflow: 'visible',
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{ color: theme.palette.text.secondary, fontWeight: 700, fontSize: '16px', textAlign: 'center' }}
+                              >
+                                N/A
+                              </Typography>
+                            </Card>
+                          ) : (
+                            <Box
+                              key={nist}
+                              sx={{
+                                bgcolor: style.bgcolor,
+                                border: `1px solid ${style.borderColor}`,
+                                borderRadius: '8px',
+                                boxShadow: theme.shadows[1],
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'flex-start',
+                                alignItems: 'stretch',
+                                height: 'auto',
+                                px: '10px',
+                                pt: '8px',
+                                pb: '8px',
+                                position: 'relative',
+                                overflow: 'visible',
+                              }}
+                            >
+                                  {/* Status icon — absolute top-right */}
+                                  {showCoverageState && (
+                                    <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+                                      {isCovered ? (
+                                        <Tooltip title="Covered" placement="top" arrow>
+                                          <Box component="span" sx={{ display: 'inline-flex' }}>
+                                            <CheckSuccessHealthy fontSize="small" sx={{ color: theme.palette.text.primary, display: 'block' }} />
+                                          </Box>
+                                        </Tooltip>
+                                      ) : (
+                                        <Tooltip title="No Coverage" placement="top" arrow>
+                                          <Box component="span" sx={{ display: 'inline-flex' }}>
+                                            <Clear fontSize="small" sx={{ color: theme.palette.text.primary, display: 'block' }} />
+                                          </Box>
+                                        </Tooltip>
+                                      )}
+                                    </Box>
+                                  )}
+
+                                  {/* Percentage */}
+                                  {showPercentageCoverage && (
+                                    <Typography
+                                      variant="code1"
+                                      sx={{
+                                        color: style.textColor,
+                                        fontSize: '18px',
+                                        mb: '6px',
+                                      }}
+                                    >
+                                      {`${coverage}%`}
+                                    </Typography>
+                                  )}
+
+                                  {/* Progress bar */}
+                                  {showPercentageCoverage && (
+                                    <LinearProgress
+                                      value={coverage}
+                                      variant="determinate"
+                                      sx={{
+                                        height: 6,
+                                        borderRadius: '999px',
+                                        bgcolor: theme.palette.action.hover,
+                                        mb: '12px',
+                                        '& .MuiLinearProgress-bar': {
+                                          bgcolor: style.barColor,
+                                        },
+                                      }}
+                                    />
+                                  )}
+
+                                  {showProductAvatars ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                      {mappedProducts.map((productName) => {
+                                        const ProductIcon = productIcons[productName];
+                                        const active = licensedProducts.has(productName);
+                                        return (
+                                          <Tooltip key={`${asset}-${nist}-${productName}`} title={productName} placement="top" arrow>
+                                            <Box
+                                              component="span"
+                                              sx={{
+                                                display: 'inline-flex',
+                                                flexShrink: 0,
+                                                opacity: active ? 1 : 0.45,
+                                              }}
+                                            >
+                                              <ProductIcon
+                                                fontSize="small"
+                                                sx={{
+                                                  color: theme.palette.text.primary,
+                                                  '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
+                                                  '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
+                                                }}
+                                              />
+                                            </Box>
+                                          </Tooltip>
+                                        );
+                                      })}
+                                    </Box>
+                                  ) : null}
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+
+        {/* Recommendations */}
+        <Card sx={{ ...incidentCardSurface(theme), width: '100%' }}>
+          <CardContent>
+            <DashboardCardHeader
+              title="Recommendations"
+              subheader="Add these Rapid7 products to expand your coverage score."
+            />
+            {recommendations.length === 0 ? (
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: '12px' }}>
+                You&apos;re fully covered &mdash; no additional products would improve the score.
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'grid', gap: '8px', mt: '8px' }}>
+                {recommendations.map((rec) => {
+                  const ProductIcon = productIcons[rec.name];
+                  const description = productDescriptions[rec.name];
+                  return (
+                    <Card
+                      key={rec.name}
+                      variant="outlined"
+                      sx={{
+                        boxShadow: theme.shadows[1],
+                        pointerEvents: 'none',
+                        '& *': { pointerEvents: 'auto' },
+                      }}
+                    >
+                      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '12px', py: '12px !important' }}>
+                        <ProductIcon
+                          fontSize="small"
+                          sx={{
+                            flexShrink: 0,
+                            color: theme.palette.text.primary,
+                            '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
+                            '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
+                          }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                            {rec.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                            {description}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                          <Chip label={`+${rec.pointsGained} pts`} size="nano" />
+                          <Button size="small" variant="outlined" endIcon={<NextChevronRightArrow />}>
+                            Learn More
+                          </Button>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+
+        <Dialog
+          open={isCoverageDialogOpen}
+          onClose={() => setIsCoverageDialogOpen(false)}
+        >
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: '48px' }}>
+            <Typography variant="h5">Scoring information</Typography>
+            <IconButton aria-label="close" onClick={() => setIsCoverageDialogOpen(false)} size="small" sx={{ position: 'absolute', right: 16, top: 16 }}>
+              <CancelClose fontSize="small" />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <Box>
+
+              {/* Coverage Adjustments */}
+              <Card sx={{ boxShadow: theme.shadows[1] }}>
+                <CardHeader title="Coverage Adjustments" subheader="Reductions when infrastructure is incomplete." />
+                <CardContent>
+                  <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px', bgcolor: theme.palette.background.paper }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1fr 1.3fr', px: '16px', py: '8px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                      {['COMPONENT', 'PRODUCT AFFECTED', 'SCOPE', 'REDUCTION'].map((h) => (
+                        <Typography key={h} variant="overline" sx={{ color: theme.palette.text.secondary }}>{h}</Typography>
+                      ))}
+                    </Box>
+                    {[
+                      { component: 'Scan engines', product: 'insightVM', scope: 'All cells', reduction: '-25%' },
+                      { component: 'Collectors', product: 'insightIDR', scope: 'All cells', reduction: '-50%' },
+                      { component: 'Network sensors', product: 'insightIDR', scope: 'All cells', reduction: '-25%' },
+                      { component: 'Honeypots', product: 'insightIDR', scope: 'All cells', reduction: '-10%' },
+                      { component: 'Orchestrator', product: 'insightIDR', scope: 'DETECT only', reduction: '-10%' },
+                      { component: 'SC connectors < 5', product: 'Surface Command', scope: 'All cells', reduction: '-50%' },
+                      { component: 'No event sources', product: 'insightIDR', scope: 'All cells', reduction: '-75%' },
+                      { component: '< 5 event sources', product: 'insightIDR', scope: 'All cells', reduction: '-50%' },
+                      { component: 'Stale / offline agents', product: 'insightIDR', scope: 'All cells', reduction: '-10% per 10% unhealthy' },
+                      { component: 'No ICON workflows', product: 'insightIDR', scope: 'DETECT only', reduction: '-10%' },
+                    ].map((row) => (
+                      <Box key={row.component} sx={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1fr 1.3fr', px: '16px', py: '10px', borderBottom: `1px solid ${theme.palette.divider}`, '&:last-child': { borderBottom: 'none' } }}>
+                        <Typography variant="body2">{row.component}</Typography>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{row.product}</Typography>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{row.scope}</Typography>
+                        <Typography variant="body2" sx={{ color: statusTokens.critical.main, fontWeight: 600 }}>{row.reduction}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+
+            </Box>
+          </DialogContent>
+        </Dialog>
+      </Box>
+    );
+  };
+
   const renderAICommandCenter = () => {
     const sectionLabelSx = {
       color: theme.palette.text.secondary,
@@ -1717,7 +2429,23 @@ export const CommandHome: React.FC = () => {
           <CardHeader
             title={title}
             subheader={category}
-            avatar={<Icon />}
+            avatar={
+              <Box
+                sx={{
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '8px',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Icon />
+              </Box>
+            }
           />
           <Typography variant="body2" sx={{ color: theme.palette.text.secondary, flex: 1, mb: '8px' }}>
             {body}
@@ -1883,12 +2611,14 @@ export const CommandHome: React.FC = () => {
         <Tab label="Incident Command" />
         <Tab label="Compliance" />
         <Tab label="AI Command Center" />
+        <Tab label="Coverage Matrix" />
       </Tabs>
 
       <TabPanel index={0} value={activeTab}>{renderExposureManagement()}</TabPanel>
       <TabPanel index={1} value={activeTab}>{renderIncidentCommand()}</TabPanel>
       <TabPanel index={2} value={activeTab}>{renderCompliance()}</TabPanel>
       <TabPanel index={3} value={activeTab}>{renderAICommandCenter()}</TabPanel>
+      <TabPanel index={4} value={activeTab}>{renderCoverageMatrix()}</TabPanel>
     </Box>
   );
 };

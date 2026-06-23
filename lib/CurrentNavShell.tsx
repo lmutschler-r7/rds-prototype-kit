@@ -43,6 +43,7 @@ const getActiveParentId = (items: NavItem[], currentPath: string) => {
 export const CurrentNavShell: React.FC<ShellProps> = ({ children }) => {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [logoSvgMarkup, setLogoSvgMarkup] = useState<string>('');
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [clickedItemId, setClickedItemId] = useState<string | null>(null);
   const [indicatorState, setIndicatorState] = useState({ top: 0, height: 0, visible: false });
   const workspaceItems = useMemo(() => getWorkspaceItems(navConfig.navTree as NavItem[]), []);
@@ -100,6 +101,19 @@ export const CurrentNavShell: React.FC<ShellProps> = ({ children }) => {
         origin: { x: event.clientX, y: event.clientY },
       },
     }));
+  };
+
+  const switchNavStyle = (event: React.MouseEvent) => {
+    const currentShellVariant = window.localStorage.getItem('shellVariant');
+    const nextShellVariant = currentShellVariant === 'future' ? 'current' : 'future';
+    window.localStorage.setItem('shellVariant', nextShellVariant);
+    window.dispatchEvent(new CustomEvent('shell-variant-change', {
+      detail: {
+        variant: nextShellVariant,
+        origin: { x: event.clientX, y: event.clientY },
+      },
+    }));
+    setProfileMenuOpen(false);
   };
 
   const theme = useTheme<Theme>();
@@ -234,6 +248,7 @@ export const CurrentNavShell: React.FC<ShellProps> = ({ children }) => {
             {renderUtilityButton('access-request', <AccessRequest style={{ width: 24, height: 24, color: colors.textPrimary }} />)}
             {renderUtilityButton('help-information', <HelpInformation style={{ width: 24, height: 24, color: colors.textPrimary }} />)}
             <Box
+              onClick={() => setProfileMenuOpen((previous) => !previous)}
               sx={{
                 width: '24px',
                 height: '24px',
@@ -246,9 +261,56 @@ export const CurrentNavShell: React.FC<ShellProps> = ({ children }) => {
                 fontSize: '10px',
                 fontWeight: 700,
                 flexShrink: 0,
+                cursor: 'pointer',
+                position: 'relative',
               }}
             >
               OP
+              {profileMenuOpen && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '32px',
+                    right: 0,
+                    minWidth: '144px',
+                    bgcolor: colors.bgChrome,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: '10px',
+                    boxShadow: colors.shadow,
+                    py: '4px',
+                    zIndex: 1400,
+                    animation: 'currentNavProfileMenuIn 180ms ease-out',
+                    '@keyframes currentNavProfileMenuIn': {
+                      from: { opacity: 0, transform: 'translateY(-6px)' },
+                      to: { opacity: 1, transform: 'translateY(0)' },
+                    },
+                  }}
+                >
+                  <Box px="12px" py="8px">
+                    <Typography sx={{ fontSize: '12px', color: colors.textSecondary }}>Settings</Typography>
+                  </Box>
+                  <Box
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      switchNavStyle(event);
+                    }}
+                    px="12px"
+                    py="8px"
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'background-color 160ms ease-out',
+                      '&:hover': {
+                        bgcolor: colors.bgHover,
+                      },
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '12px', color: colors.textPrimary }}>Switch Nav</Typography>
+                  </Box>
+                  <Box px="12px" py="8px">
+                    <Typography sx={{ fontSize: '12px', color: colors.textSecondary }}>Log Out</Typography>
+                  </Box>
+                </Box>
+              )}
             </Box>
           </Stack>
         </Box>

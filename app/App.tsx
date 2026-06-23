@@ -14,8 +14,15 @@ import { ResponseRemediation } from './pages/ResponseRemediation';
 import { VulnerabilityDetail } from './pages/VulnerabilityDetail';
 
 type ThemeMode = 'light' | 'dark';
+type ShellVariant = 'current' | 'future';
 type ThemeToggleOrigin = { x: number; y: number };
 type ThemeModeChangeDetail = ThemeMode | { mode: ThemeMode; origin?: ThemeToggleOrigin };
+type ShellVariantChangeDetail = ShellVariant | { variant: ShellVariant; origin?: ThemeToggleOrigin };
+
+const getStoredShellVariant = (): ShellVariant => {
+  const storedShellVariant = window.localStorage.getItem('shellVariant');
+  return storedShellVariant === 'future' ? 'future' : 'current';
+};
 
 const getStoredThemeMode = (): ThemeMode => {
   const storedThemeMode = window.localStorage.getItem('themeMode');
@@ -23,13 +30,9 @@ const getStoredThemeMode = (): ThemeMode => {
 };
 
 export const App = () => {
-  // Runtime style overrides (falls back to defaults below)
-  const storedShellVariant = window.localStorage.getItem('shellVariant');
-
   // App-level visual defaults
-  // Change nav style default here: 'future' or 'current'
-  const shellVariant: 'current' | 'future' =
-    storedShellVariant === 'current' || storedShellVariant === 'future' ? storedShellVariant : 'current';
+  // Change nav style default here via localStorage shellVariant: 'future' or 'current'
+  const [shellVariant, setShellVariant] = useState<ShellVariant>(getStoredShellVariant);
 
   // Change theme default here: 'light' or 'dark'
   const [themeMode, setThemeMode] = useState<ThemeMode>(getStoredThemeMode);
@@ -100,6 +103,75 @@ export const App = () => {
       });
   };
 
+  const resolveShellVariantFromDetail = (detail?: ShellVariantChangeDetail): ShellVariant => {
+    if (!detail) {
+      return getStoredShellVariant();
+    }
+
+    if (typeof detail === 'string') {
+      return detail === 'future' ? 'future' : 'current';
+    }
+
+    return detail.variant === 'future' ? 'future' : 'current';
+  };
+
+  const resolveShellOriginFromDetail = (detail?: ShellVariantChangeDetail): ThemeToggleOrigin => {
+    if (!detail || typeof detail === 'string' || !detail.origin) {
+      return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }
+
+    return detail.origin;
+  };
+
+  const startShellTransition = (nextShellVariant: ShellVariant, origin: ThemeToggleOrigin) => {
+    const docWithTransition = document as Document & {
+      startViewTransition?: (updateCallback: () => void) => { ready: Promise<void> };
+    };
+
+    if (!docWithTransition.startViewTransition) {
+      setShellVariant(nextShellVariant);
+      return;
+    }
+
+    const transition = docWithTransition.startViewTransition(() => {
+      flushSync(() => {
+        setShellVariant(nextShellVariant);
+      });
+    });
+
+    transition.ready
+      .then(() => {
+        const maxHorizontalDistance = Math.max(origin.x, window.innerWidth - origin.x);
+        const maxVerticalDistance = Math.max(origin.y, window.innerHeight - origin.y);
+        const endRadius = Math.hypot(maxHorizontalDistance, maxVerticalDistance);
+
+        (document.documentElement as any).animate(
+          [
+            {
+              clipPath: `circle(0px at ${origin.x}px ${origin.y}px)`,
+              offset: 0,
+            },
+            {
+              clipPath: `circle(${Math.max(8, endRadius * 0.08)}px at ${origin.x}px ${origin.y}px)`,
+              offset: 0.16,
+            },
+            {
+              clipPath: `circle(${endRadius}px at ${origin.x}px ${origin.y}px)`,
+              offset: 1,
+            },
+          ],
+          {
+            duration: 520,
+            easing: 'cubic-bezier(0.32, 0, 0.2, 1)',
+            pseudoElement: '::view-transition-new(root)',
+          },
+        );
+      })
+      .catch(() => {
+        // Keep fallback behavior silent if transition setup fails.
+      });
+  };
+
   useEffect(() => {
     const handleLocationChange = () => setCurrentPath(window.location.pathname);
     window.addEventListener('popstate', handleLocationChange);
@@ -119,13 +191,25 @@ export const App = () => {
       if (event.key === 'themeMode') {
         setThemeMode(getStoredThemeMode());
       }
+
+      if (event.key === 'shellVariant') {
+        setShellVariant(getStoredShellVariant());
+      }
+    };
+
+    const handleShellVariantChange = (event: Event) => {
+      const customEvent = event as CustomEvent<ShellVariantChangeDetail>;
+      const detail = customEvent.detail;
+      startShellTransition(resolveShellVariantFromDetail(detail), resolveShellOriginFromDetail(detail));
     };
 
     window.addEventListener('theme-mode-change', handleThemeModeChange as EventListener);
+    window.addEventListener('shell-variant-change', handleShellVariantChange as EventListener);
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
       window.removeEventListener('theme-mode-change', handleThemeModeChange as EventListener);
+      window.removeEventListener('shell-variant-change', handleShellVariantChange as EventListener);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);

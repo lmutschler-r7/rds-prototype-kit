@@ -916,10 +916,6 @@ export const Alerts: React.FC = () => {
               title="New Alerts by Source"
               subheader="Last 8 hours"
               sx={{ px: 2, pt: 2, pb: 0 }}
-              slotProps={{
-                title: { variant: 'subtitle1', sx: { color: 'text.primary', fontWeight: 600 } },
-                subheader: { variant: 'body2', sx: { color: 'text.secondary' } }
-              }}
             />
             <CardContent sx={{ pt: 1.5 }}>
               <ReactEChartsCore
@@ -937,10 +933,6 @@ export const Alerts: React.FC = () => {
               title="AI-Triage Alert Closure"
               subheader="Last 24 hours"
               sx={{ px: 2, pt: 2, pb: 0 }}
-              slotProps={{
-                title: { variant: 'subtitle1', sx: { color: 'text.primary', fontWeight: 600 } },
-                subheader: { variant: 'body2', sx: { color: 'text.secondary' } }
-              }}
             />
             <CardContent sx={{ pt: 1.5 }}>
               <ReactEChartsCore
@@ -958,10 +950,6 @@ export const Alerts: React.FC = () => {
               title="Risk-Aware Detection Over time"
               subheader="Last Month"
               sx={{ px: 2, pt: 2, pb: 0 }}
-              slotProps={{
-                title: { variant: 'subtitle1', sx: { color: 'text.primary', fontWeight: 600 } },
-                subheader: { variant: 'body2', sx: { color: 'text.secondary' } }
-              }}
             />
             <CardContent sx={{ pt: 1.5 }}>
               <ReactEChartsCore

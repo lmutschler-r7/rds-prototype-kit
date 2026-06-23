@@ -41,3 +41,4 @@ Use this folder as the default Copilot steering source for page work.
 5. Keep nav/header/content layering predictable and explicit.
 6. Treat unresolved required gaps as blockers, not assumptions.
 7. Treat accessibility conformance as low-emphasis for PoC unless explicitly required by the prompt.
+8. Never add `slotProps` overrides to `CardHeader` (or any component) to change `variant`, `color`, `fontWeight`, or `sx` on internal slots — use the component's default styling. This applies to all cards, now and in the future.
