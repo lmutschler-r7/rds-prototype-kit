@@ -83,6 +83,20 @@
       ]
     },
     {
+      "id": "intelligence",
+      "type": "parent",
+      "label": "Intelligence",
+      "icon": "InformationHint",
+      "children": [
+        { "id": "rapid7-labs", "type": "leaf", "label": "Rapid7 Labs", "path": "/intelligence/rapid7-labs" },
+        
+        { "id": "digital-risk-protection", "type": "group-header", "label": "Digital Risk Protection" },
+        { "id": "intellifind", "type": "leaf", "label": "IntelliFind", "path": "/intelligence/intellifind" },
+        { "id": "drp-risk-analyzer", "type": "leaf", "label": "DRP Risk Analyzer", "path": "/intelligence/drp-analyzer" },
+        { "id": "alert-profiler", "type": "leaf", "label": "Alert Profiler", "path": "/intelligence/alert-profiler" }
+      ]
+    },
+    {
       "id": "data-connectors",
       "type": "parent",
       "label": "Data Connectors",

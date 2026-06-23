@@ -2,7 +2,7 @@
 
 Designer-first prototype workspace for building and demoing RDS-powered pages quickly.
 
-## Quick Start
+## Dev Setup
 
 ```bash
 npm install
@@ -11,89 +11,41 @@ npm run dev
 
 Open the local URL shown by Vite (usually `http://localhost:5173`).
 
-## Switch Theme and Nav Style
+## Create a New Page
 
-Set these directly in `app/App.tsx`.
+1. Create a page file in `app/pages/MyPage.tsx`
+2. Use `@rapid7/rds` components and theme tokens (`useTheme()`)
+3. Add mock data to `app/data/`
+4. Wire the route in `app/App.tsx`
+5. Validate with `npm run build`
 
-1. Open `app/App.tsx`.
-2. Find the fallback values in these two expressions:
+For detailed guidance, see [.ai-steering/page-rules-index.md](.ai-steering/page-rules-index.md).
 
-```ts
-const shellVariant: 'current' | 'future' =
-	storedShellVariant === 'current' || storedShellVariant === 'future' ? storedShellVariant : 'future';
+## Rules & Guidelines
 
-const themeMode: 'light' | 'dark' =
-	storedThemeMode === 'light' || storedThemeMode === 'dark' ? storedThemeMode : 'light';
-```
+All work follows [.ai-steering/page-rules-index.md](.ai-steering/page-rules-index.md), which covers:
+- **Component usage**: Prefer @rapid7/rds over custom wrappers
+- **Styling**: Use theme tokens for colors, spacing, shadows
+- **Build rules**: Specific patterns for dashboards, tables, and charts
+- **Audit checks**: Validation steps before submitting
 
-3. Change the fallback values to set your default app style:
-	 - Nav shell default: change `'future'` to `'current'` if needed
-	 - Theme default: change `'light'` to `'dark'` if needed
+Both **Copilot** and **Kiro** automatically load these rules when working in this repo—no setup needed.
 
-Notes:
-1. `shellVariant` maps to:
-	 - `'future'` -> `FutureNavShell`
-	 - `'current'` -> `CurrentNavShell`
-2. If a previous localStorage override exists, it will still win over your new defaults. Remove `themeMode` and `shellVariant` from localStorage if your edit does not appear immediately.
+## Switch Theme & Nav Style
 
-## Goal
+No code changes needed—both are toggled in the running prototype:
 
-This repo is optimized for designers to:
-1. Add new pages fast.
-2. Keep pages visually consistent via RDS tokens.
-3. Demo flows in-browser without backend dependencies.
+**Theme (light / dark)**
+Click the **Rapid7 logo** in the top-left corner of the nav. It switches between light and dark mode with an animated transition.
 
-## Build a New Page
+**Nav style (current / future)**
+Click your **user avatar** (the initials badge) in the nav. A menu appears with a **Switch Nav** option. Selecting it swaps the nav shell with an animated reveal.
 
-1. Create a page file in `app/pages`.
-2. Use RDS + RDS-labs components first (avoid custom wrappers when a standard component exists).
-3. Use theme tokens via `useTheme<Theme>()` for colors/elevation.
-4. Add deterministic mock data in `app/data`.
-5. Wire the route in `app/App.tsx`.
-6. Validate:
+Both preferences are stored in `localStorage` so they persist between page reloads.
 
-```bash
-npm run build
-```
+## Current Routes
 
-## Demo Workflow
-
-Use this when handing off to another designer for review.
-
-1. Create a feature branch.
-
-```bash
-git checkout -b designer/<feature-name>
-```
-
-2. Build the page and run locally.
-3. Push branch and share:
-	- Branch name
-	- Route(s) to review (example: `/response`, `/findings`)
-	- 3-5 test steps (what to click, expected behavior)
-4. Optional: publish preview via Vercel/Netlify for non-local reviewers.
-
-## AI Steering
-
-Use `.ai-steering/page-rules-index.md` as the default guidance for new page builds and refactors.
-It defines component-first RDS usage, token-based theming, layering rules, and validation checklist items.
-
-Steering files:
-1. Build rules: `.ai-steering/page-rules-build.md`
-2. Audit rules: `.ai-steering/page-rules-audit.md`
-
-## Page Checklist
-
-Before sharing a demo, confirm:
-1. No hardcoded visual color literals in page styling.
-2. Uses RDS/RDS-labs primitives where available.
-3. Data is deterministic and repeatable.
-4. Route is wired and reachable from nav/URL.
-5. `npm run build` passes.
-
-## Current Key Routes
-
-1. `/command-home`
-2. `/alerts`
-3. `/findings`
-4. `/response`
+- `/command-home`
+- `/alerts`
+- `/findings`
+- `/response`

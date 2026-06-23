@@ -15,6 +15,7 @@ export const FutureNavShell: React.FC<ShellProps> = ({ children }) => {
   // High-fidelity sidebar layout orchestration states
   const [isPinned, setIsPinned] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleLocationChange = () => setCurrentPath(window.location.pathname);
@@ -61,6 +62,18 @@ export const FutureNavShell: React.FC<ShellProps> = ({ children }) => {
     }));
   };
 
+  const switchNavStyle = (event: React.MouseEvent) => {
+    const currentShellVariant = window.localStorage.getItem('shellVariant');
+    const nextShellVariant = currentShellVariant === 'current' ? 'future' : 'current';
+    window.localStorage.setItem('shellVariant', nextShellVariant);
+    window.dispatchEvent(new CustomEvent('shell-variant-change', {
+      detail: {
+        variant: nextShellVariant,
+        origin: { x: event.clientX, y: event.clientY },
+      },
+    }));
+    setProfileMenuOpen(false);
+  };
   const toggleParent = (id: string) => {
     setExpandedParents(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -152,10 +165,62 @@ export const FutureNavShell: React.FC<ShellProps> = ({ children }) => {
           />
 
           {/* Workspace User Menu Area + Right Aligned Action Utilities */}
-          <Stack direction="row" alignItems="center" gap="6px" px="7px" py="2px" mb="16px" width="100%" sx={{ position: 'relative', zIndex: 2 }}>
-            <Box bgcolor={colors.accent} width="20px" height="20px" borderRadius="6px" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+          <Stack direction="row" alignItems="center" gap="6px" px="7px" py="2px" mb="16px" width="100%" sx={{ position: 'relative', zIndex: 5 }}>
+            <Box 
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              bgcolor={colors.accent} 
+              width="20px" 
+              height="20px" 
+              borderRadius="6px" 
+              display="flex" 
+              alignItems="center" 
+              justifyContent="center" 
+              flexShrink={0}
+              sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8, transition: 'opacity 0.2s' } }}
+            >
               <Typography variant="body2" sx={{ fontSize: '10px', fontWeight: 'bold', color: colors.textOnAccent, lineHeight: 1 }}>LE</Typography>
             </Box>
+
+                        {/* Profile Menu */}
+                        {profileMenuOpen && (
+                          <Box 
+                            sx={{
+                              position: 'absolute',
+                              top: '28px',
+                              left: 0,
+                              bgcolor: colors.bgMain,
+                              border: `1px solid ${colors.border}`,
+                              borderRadius: '8px',
+                              boxShadow: colors.navShadow,
+                              minWidth: '140px',
+                              zIndex: 2000,
+                              animation: 'slideDown 0.2s ease-out',
+                              '@keyframes slideDown': {
+                                from: { opacity: 0, transform: 'translateY(-8px)' },
+                                to: { opacity: 1, transform: 'translateY(0)' }
+                              }
+                            }}
+                          >
+                            <Box px="12px" py="8px">
+                              <Typography sx={{ fontSize: '12px', color: colors.textInactive, fontWeight: 'medium', pb: '8px' }}>Settings</Typography>
+                            </Box>
+                            <Box 
+                              onClick={switchNavStyle}
+                              px="12px" 
+                              py="8px" 
+                              sx={{ 
+                                cursor: 'pointer', 
+                                '&:hover': { bgcolor: colors.bgHover },
+                                transition: 'background-color 0.2s'
+                              }}
+                            >
+                              <Typography sx={{ fontSize: '12px', color: colors.textActive }}>Switch Nav</Typography>
+                            </Box>
+                            <Box px="12px" py="8px">
+                              <Typography sx={{ fontSize: '12px', color: colors.textInactive, fontWeight: 'medium' }}>Log Out</Typography>
+                            </Box>
+                          </Box>
+                        )}
             <Typography variant="body2" sx={{ fontSize: '14px', color: colors.textActive, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
               {navConfig.username}
             </Typography>

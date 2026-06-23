@@ -85,16 +85,6 @@ const DashboardCardHeader: React.FC<DashboardCardHeaderProps> = ({ title, action
     avatar={avatar}
     action={action}
     sx={{ px: 0, pt: 0, pb: '8px' }}
-    slotProps={{
-      title: {
-        variant: 'subtitle1',
-        sx: { color: 'text.primary', fontWeight: 600 },
-      },
-      subheader: {
-        variant: 'body2',
-        sx: { color: 'text.secondary' },
-      },
-    }}
   />
 );
 
@@ -1980,17 +1970,6 @@ export const CommandHome: React.FC = () => {
             <CardHeader
               title="Licensed Products"
               subheader="Toggle products to simulate licensing scenarios and see how your coverage score changes."
-              sx={{ px: '16px', pt: '16px', pb: '8px' }}
-              slotProps={{
-                title: {
-                  variant: 'subtitle1',
-                  sx: { color: 'text.primary', fontWeight: 600 },
-                },
-                subheader: {
-                  variant: 'body2',
-                  sx: { color: 'text.secondary' },
-                },
-              }}
             />
             <CardContent sx={{ pt: 0, pb: '16px' }}>
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -2417,7 +2396,23 @@ export const CommandHome: React.FC = () => {
           <CardHeader
             title={title}
             subheader={category}
-            avatar={<Icon />}
+            avatar={
+              <Box
+                sx={{
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: '8px',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Icon />
+              </Box>
+            }
           />
           <Typography variant="body2" sx={{ color: theme.palette.text.secondary, flex: 1, mb: '8px' }}>
             {body}
