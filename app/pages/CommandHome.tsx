@@ -1957,6 +1957,39 @@ export const CommandHome: React.FC = () => {
 
     return (
       <Box sx={{ display: 'grid', gap: '16px' }}>
+        {/* Coverage Adjustments Info Card */}
+        <Card sx={{ boxShadow: theme.shadows[1] }}>
+          <CardHeader title="Coverage Adjustments" subheader="Reductions when infrastructure is incomplete." />
+          <CardContent>
+            <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px', bgcolor: theme.palette.background.paper, overflowX: 'auto' }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1fr 1.3fr', px: '16px', py: '8px', borderBottom: `1px solid ${theme.palette.divider}`, minWidth: '600px' }}>
+                {['COMPONENT', 'PRODUCT AFFECTED', 'SCOPE', 'REDUCTION'].map((h) => (
+                  <Typography key={h} variant="overline" sx={{ color: theme.palette.text.secondary }}>{h}</Typography>
+                ))}
+              </Box>
+              {[
+                { component: 'Scan engines', product: 'insightVM', scope: 'All cells', reduction: '-25%' },
+                { component: 'Collectors', product: 'insightIDR', scope: 'All cells', reduction: '-50%' },
+                { component: 'Network sensors', product: 'insightIDR', scope: 'All cells', reduction: '-25%' },
+                { component: 'Honeypots', product: 'insightIDR', scope: 'All cells', reduction: '-10%' },
+                { component: 'Orchestrator', product: 'insightIDR', scope: 'DETECT only', reduction: '-10%' },
+                { component: 'SC connectors < 5', product: 'Surface Command', scope: 'All cells', reduction: '-50%' },
+                { component: 'No event sources', product: 'insightIDR', scope: 'All cells', reduction: '-75%' },
+                { component: '< 5 event sources', product: 'insightIDR', scope: 'All cells', reduction: '-50%' },
+                { component: 'Stale / offline agents', product: 'insightIDR', scope: 'All cells', reduction: '-10% per 10% unhealthy' },
+                { component: 'No ICON workflows', product: 'insightIDR', scope: 'DETECT only', reduction: '-10%' },
+              ].map((row) => (
+                <Box key={row.component} sx={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1fr 1.3fr', px: '16px', py: '10px', borderBottom: `1px solid ${theme.palette.divider}`, '&:last-child': { borderBottom: 'none' }, minWidth: '600px' }}>
+                  <Typography variant="body2">{row.component}</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{row.product}</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{row.scope}</Typography>
+                  <Typography variant="body2" sx={{ color: statusTokens.critical.main, fontWeight: 600 }}>{row.reduction}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+
         <Box
           sx={{
             display: 'grid',
@@ -2577,15 +2610,15 @@ export const CommandHome: React.FC = () => {
         <Tab label="Exposure Management" />
         <Tab label="Incident Command" />
         <Tab label="Compliance" />
-        <Tab label="Coverage Matrix" />
         <Tab label="AI Command Center" />
+        <Tab label="Coverage Matrix" />
       </Tabs>
 
       <TabPanel index={0} value={activeTab}>{renderExposureManagement()}</TabPanel>
       <TabPanel index={1} value={activeTab}>{renderIncidentCommand()}</TabPanel>
       <TabPanel index={2} value={activeTab}>{renderCompliance()}</TabPanel>
-      <TabPanel index={3} value={activeTab}>{renderCoverageMatrix()}</TabPanel>
-      <TabPanel index={4} value={activeTab}>{renderAICommandCenter()}</TabPanel>
+      <TabPanel index={3} value={activeTab}>{renderAICommandCenter()}</TabPanel>
+      <TabPanel index={4} value={activeTab}>{renderCoverageMatrix()}</TabPanel>
     </Box>
   );
 };
