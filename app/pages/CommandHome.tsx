@@ -2316,13 +2316,33 @@ export const CommandHome: React.FC = () => {
       }
 
       if (coverageViewMode === 'percent') {
-        const strongestDomain = ['DETECT']; // Placeholder
-        const weakestDomain = ['GOVERN']; // Placeholder
+        // Compute domain coverage to identify strongest and weakest areas
+        const cellCoverageByDomain: Record<NistFunction, number> = {
+          GOVERN: 0, IDENTIFY: 0, PROTECT: 0, DETECT: 0, RESPOND: 0, RECOVER: 0,
+        };
+        const cellCountByDomain: Record<NistFunction, number> = {
+          GOVERN: 0, IDENTIFY: 0, PROTECT: 0, DETECT: 0, RESPOND: 0, RECOVER: 0,
+        };
+        ASSET_TYPES.forEach((asset) => {
+          NIST_FUNCTIONS.forEach((nist) => {
+            const cov = getCoverage(asset, nist, 'percent');
+            if (cov !== null) {
+              cellCountByDomain[nist]++;
+              cellCoverageByDomain[nist] += cov;
+            }
+          });
+        });
+        const avgByDomain = Object.entries(cellCoverageByDomain).map(([domain, sum]) => ({
+          domain,
+          avg: cellCountByDomain[domain as NistFunction] > 0 ? Math.round(sum / cellCountByDomain[domain as NistFunction]) : 0,
+        }));
+        const strongestDomain = avgByDomain.reduce((max, curr) => (curr.avg > max.avg ? curr : max));
+        const weakestDomain = avgByDomain.reduce((min, curr) => (curr.avg < min.avg ? curr : min));
         
-        return `Your current product portfolio provides ${avgCoverage}% average weighted coverage across the framework. Coverage is strongest in ${strongestDomain[0]} and weakest in ${weakestDomain[0]}. Increasing coverage in lower-scoring areas could improve your overall security posture.`;
+        return `Your current product portfolio provides ${avgCoverage}% average weighted coverage across the framework. Coverage is strongest in ${strongestDomain.domain.toLowerCase()} and weakest in ${weakestDomain.domain.toLowerCase()}. Increasing coverage in lower-scoring areas could improve your overall security posture.`;
       }
 
-      const potentialCoverage = 75;
+      const potentialCoverage = getAverageCoverageForMode('percent');
       const realizedCoverage = avgCoverage;
       const potentialGain = Math.max(0, potentialCoverage - realizedCoverage);
 
@@ -2426,7 +2446,7 @@ export const CommandHome: React.FC = () => {
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                              <Chip label={action.impact} size="nano" variant="outlined" />
+                              <Chip label={action.impact} size="small" variant="filled" color="success" />
                             </Box>
                           </CardContent>
                         </Card>
@@ -2738,8 +2758,8 @@ export const CommandHome: React.FC = () => {
                           </Typography>
                           {selectedContributingProducts.length > 0 ? (
                             <Box sx={{ display: 'grid' }}>
-                              {selectedContributingProducts.map((productName) => (
-                                <Box key={productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                              {selectedContributingProducts.map((productName, index) => (
+                                <Box key={productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: index < selectedContributingProducts.length - 1 ? `1px solid ${theme.palette.divider}` : 'none' }}>
                                   <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
                                     {productName}
                                   </Typography>
@@ -2765,10 +2785,10 @@ export const CommandHome: React.FC = () => {
                               Missing Products
                             </Typography>
                             <Box sx={{ display: 'grid' }}>
-                              {selectedMissingProducts.map((productName) => {
+                              {selectedMissingProducts.map((productName, index) => {
                                 const impact = selectedMissingProductImpacts.find((item) => item.productName === productName);
                                 return (
-                                  <Box key={productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                  <Box key={productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: index < selectedMissingProducts.length - 1 ? `1px solid ${theme.palette.divider}` : 'none' }}>
                                     <Link
                                       href="#"
                                       onClick={(event) => event.preventDefault()}
@@ -2819,8 +2839,8 @@ export const CommandHome: React.FC = () => {
                               </Typography>
                               {selectedContributingProductImpacts.length > 0 ? (
                                 <Box sx={{ display: 'grid' }}>
-                                  {selectedContributingProductImpacts.map((item) => (
-                                    <Box key={item.productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                  {selectedContributingProductImpacts.map((item, index) => (
+                                    <Box key={item.productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: index < selectedContributingProductImpacts.length - 1 ? `1px solid ${theme.palette.divider}` : 'none' }}>
                                       <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
                                         {item.productName}
                                       </Typography>
@@ -3041,9 +3061,8 @@ export const CommandHome: React.FC = () => {
                 <Box sx={{ display: 'grid', gap: '6px' }}>
                   <Typography variant="h6">Display Modes</Typography>
                   <DialogContentText>Coverage✓ = at least one product licensed, ✕ = none licensed, N/A = no mapping.</DialogContentText>
-                  <DialogContentText>--percent shows the summed percentage for licensed products in each cell.</DialogContentText>
-                  <DialogContentText>--solution shows the Rapid7 product names mapped to each cell.</DialogContentText>
-                  <DialogContentText>--reality adjusts percentages based on actual deployment state (see below).</DialogContentText>
+                  <DialogContentText>Depth shows the summed percentage for all mapped products in each cell.</DialogContentText>
+                  <DialogContentText>Realized adjusts percentages based on actual deployment state (see below).</DialogContentText>
                 </Box>
 
                 <Box sx={{ display: 'grid', gap: '6px' }}>
