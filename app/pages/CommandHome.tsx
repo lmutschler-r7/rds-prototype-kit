@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Alert,
+  Attribute,
   Avatar,
   Box,
   Card,
@@ -8,11 +10,21 @@ import {
   Button,
   Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   GridColDef,
   GridRenderCellParams,
   Kpi,
   KpiContainer,
+  Link,
   LinearProgress,
+  IconButton,
+  Popper,
+  PopperContent,
+  Select,
   Tab,
   Tabs,
   Theme,
@@ -20,6 +32,7 @@ import {
   Typography,
   useTheme,
 } from '@rapid7/rds';
+import { ClickAwayListener, FormControl, InputLabel, MenuItem } from '@mui/material';
 import { DataGridTable } from '@rapid7/rds-labs';
 import { getValue } from '@rapid7/rds/lib/esm/tokens';
 import {
@@ -29,15 +42,18 @@ import {
   Clear,
   CriticalAlert,
   CyberGRC,
+  CancelClose,
   HelpInformation,
   ImpactCritical,
   ImpactHigh,
   ImpactLow,
   ImpactMedium,
+  InformationHint,
   NextChevronRightArrow,
   Risk,
   SecurityShield,
   SensitiveData,
+  SortAscendingArrow,
   Verified,
   Threat,
   Target,
@@ -78,6 +94,12 @@ const DashboardCardHeader: React.FC<DashboardCardHeaderProps> = ({ title, action
     sx={{ px: 0, pt: 0, pb: '8px' }}
   />
 );
+
+// Temporary shim: RDS Alert d.ts currently marks DOM props as required.
+const RdsAlert = Alert as unknown as React.ComponentType<{
+  severity?: 'error' | 'info' | 'success' | 'warning';
+  children?: React.ReactNode;
+}>;
 
 const trendLabels = ['Feb 23', 'Mar 1', 'Mar 8', 'Mar 15'];
 const vulnerabilityAgingLabels = ['0-7', '8-30', '31-60', '61-90', '90+'];
@@ -484,8 +506,12 @@ export const CommandHome: React.FC = () => {
   const [licensedProducts, setLicensedProducts] = useState<Set<ProductName>>(
     () => new Set(coverageProducts.filter((p) => p.defaultLicensed).map((p) => p.name)),
   );
-  const [coverageViewMode, setCoverageViewMode] = useState<CoverageViewMode>('coverage');
+  const [value, setValue] = useState<CoverageViewMode>('coverage');
   const [activeAdjustmentIds, setActiveAdjustmentIds] = useState<Set<string>>(() => new Set(defaultActiveAdjustmentIds));
+  const [open, setOpen] = useState(false);
+  const [cellPopoverAnchor, setCellPopoverAnchor] = useState<HTMLElement | null>(null);
+  const [cellPopoverSelection, setCellPopoverSelection] = useState<{ asset: AssetType; nist: NistFunction } | null>(null);
+  const coverageViewMode = value;
 
   const toggleProduct = (name: ProductName) => {
     setLicensedProducts((prev) => {
@@ -509,6 +535,38 @@ export const CommandHome: React.FC = () => {
       }
       return next;
     });
+  };
+
+  const handleOpenCellPopover = (event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, asset: AssetType, nist: NistFunction) => {
+    setCellPopoverAnchor(event.currentTarget);
+    setCellPopoverSelection({ asset, nist });
+  };
+
+  const handleCloseCellPopover = () => {
+    setCellPopoverAnchor(null);
+    setCellPopoverSelection(null);
+  };
+
+  const handleToggleCellPopover = (event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, asset: AssetType, nist: NistFunction) => {
+    if (
+      cellPopoverAnchor === event.currentTarget
+      && cellPopoverSelection?.asset === asset
+      && cellPopoverSelection?.nist === nist
+    ) {
+      handleCloseCellPopover();
+      return;
+    }
+
+    handleOpenCellPopover(event, asset, nist);
+  };
+
+  const handleCellKeyDown = (event: React.KeyboardEvent<HTMLElement>, asset: AssetType, nist: NistFunction) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    handleToggleCellPopover(event, asset, nist);
   };
   const tokenTheme = theme.palette as Theme['palette'] & { brand: 'Original' | 'Callisto'; mode: 'light' | 'dark' };
   const semanticTokens = getValue('semantic', tokenTheme.brand, tokenTheme.mode);
@@ -1876,9 +1934,15 @@ export const CommandHome: React.FC = () => {
     const clampPercentage = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
     const modeLabels: Record<CoverageViewMode, string> = {
-      coverage: 'Coverage',
-      percent: 'Percent',
-      deployment: 'Deployment',
+      coverage: 'Owned Coverage',
+      percent: 'Coverage Depth',
+      deployment: 'Realized Value',
+    };
+
+    const modeSubtitles: Record<CoverageViewMode, string> = {
+      coverage: 'Licensed capabilities across your framework',
+      percent: 'Potential coverage with all products enabled',
+      deployment: 'Realized coverage with current deployments',
     };
 
     const getReductionForProduct = (product: ProductName, nist: NistFunction): number => {
@@ -1933,6 +1997,17 @@ export const CommandHome: React.FC = () => {
         value,
         hasCoverage,
       };
+    };
+
+    const getDeploymentRulesForCell = (asset: AssetType, nist: NistFunction) => {
+      const cellWeights = coverageMap[asset][nist];
+      if (cellWeights === null) return [];
+
+      const applicableProducts = Object.keys(cellWeights) as ProductName[];
+
+      return coverageAdjustmentRules
+        .filter((rule) => applicableProducts.includes(rule.product))
+        .filter((rule) => rule.scope === 'All cells' || nist === 'DETECT');
     };
 
     let applicableCells = 0;
@@ -1999,11 +2074,28 @@ export const CommandHome: React.FC = () => {
         return b.featureBoostCount - a.featureBoostCount || b.deploymentReductionLift - a.deploymentReductionLift || b.pointsGained - a.pointsGained;
       });
 
-    const recommendationSubheader = coverageViewMode === 'coverage'
-      ? 'Ranked by how many new matrix cells each product would cover.'
-      : coverageViewMode === 'percent'
-        ? 'Ranked by total percentage points gained across the matrix.'
-        : 'Ranked by deployment features that can lift realized coverage the most.';
+    const recommendationSubheader = coverageViewMode === 'deployment'
+      ? 'Prioritized next best actions using existing investments and product expansion.'
+      : 'Prioritized next best actions to improve matrix coverage.';
+
+    const nextBestActions = coverageViewMode === 'deployment'
+      ? [
+          {
+            title: 'Enable Network Sensors',
+            description: 'Deploy network sensors across your infrastructure.',
+            impact: '+8% Realized Coverage',
+          },
+          {
+            title: 'Deploy Additional Collectors',
+            description: 'Extend collector coverage to additional asset categories.',
+            impact: '+5% Realized Coverage',
+          },
+        ]
+      : recommendations.slice(0, 3).map((rec) => ({
+          title: `Add ${rec.name}`,
+          description: productDescriptions[rec.name],
+          impact: coverageViewMode === 'coverage' ? `+${rec.newCellsGained} cells` : `+${rec.pointsGained} pts`,
+        }));
 
     const getCellStyle = (coverage: number | null) => {
       if (coverage === null) {
@@ -2012,6 +2104,7 @@ export const CommandHome: React.FC = () => {
           borderColor: `${statusTokens.veryLow.main}66`,
           textColor: theme.palette.text.primary,
           barColor: 'transparent',
+          iconColor: theme.palette.text.primary,
         };
       }
       if (coverage === 0) {
@@ -2020,14 +2113,27 @@ export const CommandHome: React.FC = () => {
           borderColor: `${statusTokens.critical.main}66`,
           textColor: theme.palette.text.primary,
           barColor: statusTokens.critical.main,
+          iconColor: statusTokens.critical.main,
         };
       }
+      // In coverage view, any coverage > 0 is green
+      if (coverageViewMode === 'coverage') {
+        return {
+          bgcolor: `${statusTokens.healthy.main}1a`,
+          borderColor: `${statusTokens.healthy.main}66`,
+          textColor: theme.palette.text.primary,
+          barColor: statusTokens.healthy.main,
+          iconColor: statusTokens.healthy.main,
+        };
+      }
+      // In other modes, use the percentage-based coloring
       if (coverage === 100) {
         return {
           bgcolor: `${statusTokens.healthy.main}1a`,
           borderColor: `${statusTokens.healthy.main}66`,
           textColor: theme.palette.text.primary,
           barColor: statusTokens.healthy.main,
+          iconColor: statusTokens.healthy.main,
         };
       }
       return {
@@ -2035,7 +2141,192 @@ export const CommandHome: React.FC = () => {
         borderColor: `${statusTokens.medium.main}66`,
         textColor: theme.palette.text.primary,
         barColor: statusTokens.medium.main,
+        iconColor: statusTokens.medium.main,
       };
+    };
+
+    const selectedCellWeights = cellPopoverSelection ? coverageMap[cellPopoverSelection.asset][cellPopoverSelection.nist] : null;
+    const selectedCellCoverage = cellPopoverSelection
+      ? getCoverage(cellPopoverSelection.asset, cellPopoverSelection.nist, coverageViewMode)
+      : null;
+    const selectedMappedProducts = selectedCellWeights ? (Object.keys(selectedCellWeights as CoverageWeights) as ProductName[]) : [];
+    const selectedContributingProducts = selectedMappedProducts.filter((productName) => licensedProducts.has(productName));
+    const selectedMissingProducts = selectedMappedProducts.filter((productName) => !licensedProducts.has(productName));
+    const selectedDeploymentRules = cellPopoverSelection ? getDeploymentRulesForCell(cellPopoverSelection.asset, cellPopoverSelection.nist) : [];
+    const selectedMissingProductImpacts = cellPopoverSelection
+      ? selectedMissingProducts
+          .map((productName) => ({
+            productName,
+            gain: getCoverageGainForProduct(productName, cellPopoverSelection.asset, cellPopoverSelection.nist, coverageViewMode),
+          }))
+          .filter((item) => item.gain > 0)
+          .sort((a, b) => b.gain - a.gain)
+      : [];
+    const selectedTopMissingProduct = selectedMissingProductImpacts[0] ?? null;
+    const selectedOwnedRecommendation = selectedTopMissingProduct
+      ? `Add ${selectedTopMissingProduct.productName} to extend coverage in this area.`
+      : selectedMissingProducts.length > 0
+        ? 'Add remaining mapped products to improve this cell coverage.'
+        : 'Coverage is realized for currently mapped products in this area.';
+    const selectedContributingProductImpacts = cellPopoverSelection && selectedCellWeights
+      ? selectedContributingProducts
+          .map((productName) => {
+            const baseContribution = (selectedCellWeights as CoverageWeights)[productName] ?? 0;
+            const contribution = coverageViewMode === 'deployment'
+              ? Math.max(0, baseContribution * (1 - getReductionForProduct(productName, cellPopoverSelection.nist) / 100))
+              : baseContribution;
+
+            return {
+              productName,
+              contribution: clampPercentage(contribution),
+            };
+          })
+          .filter((item) => item.contribution > 0)
+          .sort((a, b) => b.contribution - a.contribution)
+      : [];
+    const selectedCoverageGap = Math.max(0, 100 - (selectedCellCoverage ?? 0));
+    const selectedCoverageDepthRecommendation = selectedTopMissingProduct
+      ? `Add ${selectedTopMissingProduct.productName} to extend coverage in this area.`
+      : 'No immediate product expansion recommended.';
+    const selectedPotentialCoverage = cellPopoverSelection
+      ? getCoverage(cellPopoverSelection.asset, cellPopoverSelection.nist, 'percent') ?? 0
+      : 0;
+    const selectedRealizedCoverage = selectedCellCoverage ?? 0;
+    const selectedUnrealizedValue = Math.max(0, selectedPotentialCoverage - selectedRealizedCoverage);
+    const selectedActiveDeploymentRules = selectedDeploymentRules
+      .filter((rule) => activeAdjustmentIds.has(rule.id))
+      .sort((a, b) => b.reduction - a.reduction);
+
+    const getAverageCoverageForMode = (mode: CoverageViewMode) => {
+      let modeApplicableCells = 0;
+      let modeCoverageSum = 0;
+
+      ASSET_TYPES.forEach((asset) => {
+        NIST_FUNCTIONS.forEach((nist) => {
+          const cov = getCoverage(asset, nist, mode);
+          if (cov !== null) {
+            modeApplicableCells++;
+            modeCoverageSum += cov;
+          }
+        });
+      });
+
+      return modeApplicableCells > 0 ? Math.round(modeCoverageSum / modeApplicableCells) : 0;
+    };
+
+    // Calculate mode-specific KPI values
+    const calculateModeSpecificKpis = () => {
+      // Calculate coverage by domain
+      const cellCoverageByDomain: Record<NistFunction, number> = {
+        GOVERN: 0,
+        IDENTIFY: 0,
+        PROTECT: 0,
+        DETECT: 0,
+        RESPOND: 0,
+        RECOVER: 0,
+      };
+      const cellCountByDomain: Record<NistFunction, number> = {
+        GOVERN: 0,
+        IDENTIFY: 0,
+        PROTECT: 0,
+        DETECT: 0,
+        RESPOND: 0,
+        RECOVER: 0,
+      };
+
+      ASSET_TYPES.forEach((asset) => {
+        NIST_FUNCTIONS.forEach((nist) => {
+          const cov = getCoverage(asset, nist, coverageViewMode);
+          if (cov !== null) {
+            cellCountByDomain[nist]++;
+            cellCoverageByDomain[nist] += cov;
+          }
+        });
+      });
+
+      const avgByDomain = Object.entries(cellCoverageByDomain).map(([domain, sum]) => ({
+        domain,
+        avg: cellCountByDomain[domain as NistFunction] > 0 ? Math.round(sum / cellCountByDomain[domain as NistFunction]) : 0,
+      }));
+
+      const strongestDomain = avgByDomain.reduce((max, curr) => (curr.avg > max.avg ? curr : max));
+      const weakestDomain = avgByDomain.reduce((min, curr) => (curr.avg < min.avg ? curr : min));
+
+      if (coverageViewMode === 'coverage') {
+        const coveragePercent = applicableCells > 0 ? Math.round((cellsWithCoverage / applicableCells) * 100) : 0;
+        return [
+          { label: 'Cells covered', value: cellsWithCoverage, icon: <CheckSuccessHealthy /> },
+          { label: 'Coverage', value: coveragePercent, icon: <Workflow /> },
+          { label: 'Licensed products', value: licensedProducts.size, icon: <ThreatCommand /> },
+          { label: 'Largest opportunity', value: recommendations.length > 0 ? recommendations[0].newCellsGained : 0, icon: <SortAscendingArrow /> },
+        ];
+      }
+
+      if (coverageViewMode === 'percent') {
+        const rowAverages = ASSET_TYPES.map((asset) => {
+          let sum = 0;
+          let count = 0;
+
+          NIST_FUNCTIONS.forEach((nist) => {
+            const cov = getCoverage(asset, nist, 'percent');
+            if (cov !== null) {
+              sum += cov;
+              count++;
+            }
+          });
+
+          return {
+            asset,
+            avg: count > 0 ? Math.round(sum / count) : 0,
+          };
+        });
+
+        const strongestRow = rowAverages.reduce((max, curr) => (curr.avg > max.avg ? curr : max));
+        const weakestRow = rowAverages.reduce((min, curr) => (curr.avg < min.avg ? curr : min));
+        const coverageOpportunity = recommendations.length > 0
+          ? Math.round(recommendations[0].pointsGained / Math.max(applicableCells, 1))
+          : 0;
+
+        return [
+          { label: 'Average weighted coverage', value: avgCoverage, icon: <Workflow /> },
+          { label: `Highest average (${strongestRow.asset.charAt(0)}${strongestRow.asset.slice(1).toLowerCase()})`, value: strongestRow.avg, icon: <CheckSuccessHealthy /> },
+          { label: `Lowest average (${weakestRow.asset.charAt(0)}${weakestRow.asset.slice(1).toLowerCase()})`, value: weakestRow.avg, icon: <CriticalAlert /> },
+          { label: 'Coverage opportunity', value: coverageOpportunity, icon: <SortAscendingArrow /> },
+        ];
+      }
+
+      const potentialCoverage = getAverageCoverageForMode('percent');
+      const realizedCoverage = getAverageCoverageForMode('deployment');
+      const valueLeftOnTable = Math.max(0, potentialCoverage - realizedCoverage);
+      const capabilitiesNotEnabled = coverageAdjustmentRules.filter((r) => !activeAdjustmentIds.has(r.id)).length;
+
+      return [
+        { label: 'Realized coverage', value: realizedCoverage, icon: <CheckSuccessHealthy /> },
+        { label: 'Value left on the table', value: valueLeftOnTable, icon: <SortAscendingArrow /> },
+        { label: 'Capabilities not enabled', value: capabilitiesNotEnabled, icon: <CriticalAlert /> },
+        { label: 'Estimated gain', value: valueLeftOnTable, icon: <Workflow /> },
+      ];
+    };
+
+    const getModeSpecificSummary = () => {
+      if (coverageViewMode === 'coverage') {
+        const topOpportunity = recommendations.length > 0 ? recommendations[0].name : 'All covered';
+        
+        return `Your licensed products cover ${cellsWithCoverage} of ${applicableCells} applicable cells (${avgCoverage}%). The largest gaps are in Govern and Documentation, and adding ${topOpportunity} would provide the biggest increase in coverage.`;
+      }
+
+      if (coverageViewMode === 'percent') {
+        const strongestDomain = ['DETECT']; // Placeholder
+        const weakestDomain = ['GOVERN']; // Placeholder
+        
+        return `Your current product portfolio provides ${avgCoverage}% average weighted coverage across the framework. Coverage is strongest in ${strongestDomain[0]} and weakest in ${weakestDomain[0]}. Increasing coverage in lower-scoring areas could improve your overall security posture.`;
+      }
+
+      const potentialCoverage = 75;
+      const realizedCoverage = avgCoverage;
+      const potentialGain = Math.max(0, potentialCoverage - realizedCoverage);
+
+      return `Your licensed products could provide ${potentialCoverage}% average weighted coverage, but your current deployment is realizing ${realizedCoverage}%. Enabling existing capabilities and completing recommended configurations could increase realized coverage by ${potentialGain}% without additional product purchases.`;
     };
 
     return (
@@ -2044,103 +2335,160 @@ export const CommandHome: React.FC = () => {
           sx={{
             display: 'grid',
             gap: '16px',
-            gridTemplateColumns: { xs: '1fr', xl: '1fr 3fr' },
+            gridTemplateColumns: { xs: '1fr', xl: '3fr 1fr' },
             alignItems: 'start',
           }}
         >
-          {/* Licensed Products panel */}
-          <Card sx={incidentCardSurface(theme)}>
-            <CardHeader
-              title="Licensed Products"
-              subheader="Toggle products to simulate licensing scenarios and see how your coverage score changes."
-            />
-            <CardContent sx={{ pt: 0, pb: '16px' }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                {coverageProducts.map((product) => {
-                  const ProductIcon = productIcons[product.name];
-                  return (
-                    <Box
-                      key={product.name}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        py: '6px',
-                      }}
-                    >
-                    <Checkbox
-                      size="small"
-                      checked={licensedProducts.has(product.name)}
-                      onChange={() => toggleProduct(product.name)}
-                      sx={{ p: '2px', mr: '8px' }}
-                    />
-                    <ProductIcon
-                      fontSize="small"
-                      sx={{
-                        mr: '4px',
-                        flexShrink: 0,
-                        color: theme.palette.text.primary,
-                        '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
-                        '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
-                      }}
-                    />
-                    <Typography variant="body2" sx={{ flex: 1, color: theme.palette.text.primary }}>
-                      {product.name}
-                    </Typography>
-                    {product.defaultLicensed && (
-                      <Chip icon={<Verified fontSize="small" />} label="Licensed" size="nano" />
-                    )}
-                  </Box>
-                  );
-                })}
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Box sx={{ display: 'grid', gap: '16px' }}>
-            <KpiContainer variant="CARD">
-              <Kpi value={licensedProducts.size} Icon={<ThreatCommand />} label="Products Licensed" />
-              <Kpi value={avgCoverage} Icon={<Workflow />} label={`${modeLabels[coverageViewMode]} Score`} />
-              <Kpi value={cellsWithCoverage} Icon={<CheckSuccessHealthy />} label="Applicable Cells Covered" />
-              <Kpi value={avgCoverage} Icon={<Workflow />} label="Avg Coverage Weight" />
-            </KpiContainer>
-
-            {/* Matrix card */}
+          <Box sx={{ display: 'grid', gap: '16px', order: { xs: 2, xl: 2 } }}>
+            {/* Licensed Products panel */}
             <Card sx={incidentCardSurface(theme)}>
+                <CardHeader
+                  title="Licensed Products"
+                  subheader="Toggle products in your owned portfolio to model baseline coverage."
+                />
+                <CardContent sx={{ pt: 0, pb: '16px' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    {coverageProducts.map((product) => {
+                      const ProductIcon = productIcons[product.name];
+                      return (
+                        <Box
+                          key={product.name}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            py: '6px',
+                          }}
+                        >
+                        <Checkbox
+                          size="small"
+                          checked={licensedProducts.has(product.name)}
+                          onChange={() => toggleProduct(product.name)}
+                          sx={{ p: '2px', mr: '8px' }}
+                        />
+                        <ProductIcon
+                          fontSize="small"
+                          sx={{
+                            mr: '4px',
+                            flexShrink: 0,
+                            color: theme.palette.text.primary,
+                            '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
+                            '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
+                          }}
+                        />
+                        <Typography variant="body2" sx={{ flex: 1, color: theme.palette.text.primary }}>
+                          {product.name}
+                        </Typography>
+                        {product.defaultLicensed && (
+                          <Chip icon={<Verified fontSize="small" />} label="Licensed" size="nano" />
+                        )}
+                      </Box>
+                      );
+                    })}
+                  </Box>
+                </CardContent>
+              </Card>
+
+            {/* Recommendations */}
+            <Card sx={{ ...incidentCardSurface(theme), width: '100%' }}>
               <CardContent>
                 <DashboardCardHeader
-                  title="Coverage Matrix"
-                  subheader={coverageViewMode === 'coverage'
-                    ? 'License lens: check where your purchased products provide coverage.'
-                    : coverageViewMode === 'percent'
-                      ? 'Coverage lens: view summed percentage coverage by cell.'
-                      : 'Deployment lens: view realized coverage after active infrastructure adjustments.'}
-                  action={(
-                    <Box
-                      role="group"
-                      aria-label="coverage mode"
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        p: '4px',
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: '999px',
-                      }}
-                    >
-                      {(['coverage', 'percent', 'deployment'] as CoverageViewMode[]).map((mode) => (
-                        <Button
-                          key={mode}
-                          size="small"
-                          variant={coverageViewMode === mode ? 'contained' : 'text'}
-                          onClick={() => setCoverageViewMode(mode)}
-                          sx={{ minWidth: 0, px: '10px' }}
+                  title="Recommendations"
+                  subheader={recommendationSubheader}
+                />
+                {nextBestActions.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: '12px' }}>
+                    You&apos;re fully covered &mdash; no additional actions are required.
+                  </Typography>
+                ) : (
+                  <Box sx={{ display: 'grid', gap: '8px', mt: '8px' }}>
+                    {nextBestActions.map((action) => {
+                      return (
+                        <Card
+                          key={action.title}
+                          variant="outlined"
+                          sx={{
+                            boxShadow: theme.shadows[1],
+                            transition: 'all 0.2s ease-in-out',
+                            cursor: 'pointer',
+                            '&:hover': {
+                              boxShadow: theme.shadows[4],
+                              bgcolor: theme.palette.action.hover,
+                            },
+                          }}
                         >
-                          {modeLabels[mode]}
-                        </Button>
-                      ))}
+                          <CardContent sx={{ py: '12px !important', px: '12px !important', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '10px' }}>
+                            <Box sx={{ minWidth: 0, display: 'grid', gap: '2px' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                                {action.title}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                                {action.description}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                              <Chip label={action.impact} size="nano" variant="outlined" />
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+
+          </Box>
+
+          <Box sx={{ display: 'grid', gap: '16px', order: { xs: 1, xl: 1 } }}>
+            {/* Matrix card */}
+            <ClickAwayListener onClickAway={handleCloseCellPopover}>
+              <Box>
+                <Card sx={incidentCardSurface(theme)}>
+                  <CardContent>
+                <DashboardCardHeader
+                  title={(
+                    <Typography variant="h3" sx={{ color: theme.palette.text.primary }}>
+                      Coverage Matrix
+                    </Typography>
+                  )}
+                  action={(
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FormControl size="small" sx={{ minWidth: 220 }}>
+                        <InputLabel id="coverage-mode-label">Select option</InputLabel>
+                        <Select
+                          labelId="coverage-mode-label"
+                          id="coverage-mode-select"
+                          label="Select option"
+                          onChange={(event) => setValue(event.target.value as CoverageViewMode)}
+                          value={value}
+                        >
+                          <MenuItem value="coverage">{modeLabels.coverage}</MenuItem>
+                          <MenuItem value="percent">{modeLabels.percent}</MenuItem>
+                          <MenuItem value="deployment">{modeLabels.deployment}</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <IconButton aria-label="matrix info" onClick={() => setOpen(true)} size="medium" sx={{ p: '4px' }}>
+                        <InformationHint fontSize="medium" />
+                      </IconButton>
                     </Box>
                   )}
+                  subheader={modeSubtitles[coverageViewMode]}
                 />
+
+                <Box sx={{ mb: '12px' }}>
+                  <RdsAlert severity="info">
+                    {getModeSpecificSummary()}
+                  </RdsAlert>
+                </Box>
+
+                {/* Mode-specific KPIs */}
+                <Box sx={{ mb: '10px' }}>
+                  <KpiContainer variant="CARD">
+                    {calculateModeSpecificKpis().map((kpi, idx) => (
+                      <Kpi key={idx} value={kpi.value} Icon={kpi.icon} label={kpi.label} />
+                    ))}
+                  </KpiContainer>
+                </Box>
                 <Box sx={{ overflowX: 'visible', mt: '8px' }}>
                   <Box sx={{ minWidth: '600px' }}>
                     {/* Column headers */}
@@ -2199,37 +2547,15 @@ export const CommandHome: React.FC = () => {
                           const coverageDetails = getCoverageDetails(asset, nist);
                           const style = getCellStyle(coverageDetails.value);
                           const mappedProducts = coverageMap[asset][nist] ? (Object.keys(coverageMap[asset][nist] as CoverageWeights) as ProductName[]) : [];
-                          const showCoverageState = true;
-                          const showPercentageCoverage = coverageViewMode !== 'coverage';
+                          const showCoverageState = coverageViewMode === 'coverage';
 
-                          return coverageDetails.value === null ? (
-                            <Card
-                              key={nist}
-                              variant="outlined"
-                              sx={{
-                                bgcolor: style.bgcolor,
-                                borderColor: style.borderColor,
-                                borderRadius: '8px',
-                                boxShadow: theme.shadows[1],
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                height: 'auto',
-                                px: '10px',
-                                py: '8px',
-                                overflow: 'visible',
-                              }}
-                            >
-                              <Typography
-                                variant="body2"
-                                sx={{ color: theme.palette.text.secondary, fontWeight: 700, fontSize: '16px', textAlign: 'center' }}
-                              >
-                                N/A
-                              </Typography>
-                            </Card>
-                          ) : (
+                          return (
                             <Box
                               key={nist}
+                              onClick={(event) => handleToggleCellPopover(event, asset, nist)}
+                              onKeyDown={(event) => handleCellKeyDown(event, asset, nist)}
+                              role="button"
+                              tabIndex={0}
                               sx={{
                                 bgcolor: style.bgcolor,
                                 border: `1px solid ${style.borderColor}`,
@@ -2237,93 +2563,124 @@ export const CommandHome: React.FC = () => {
                                 boxShadow: theme.shadows[1],
                                 display: 'flex',
                                 flexDirection: 'column',
-                                justifyContent: 'flex-start',
-                                alignItems: 'stretch',
-                                height: 'auto',
+                                justifyContent: coverageDetails.value === null ? 'center' : showCoverageState ? 'center' : 'space-between',
+                                alignItems: coverageDetails.value === null ? 'center' : showCoverageState ? 'center' : 'stretch',
+                                height: '96px',
                                 px: '10px',
-                                pt: '8px',
-                                pb: '8px',
+                                pt: '3px',
+                                pb: '3px',
+                                overflow: 'hidden',
+                                boxSizing: 'border-box',
+                                cursor: 'pointer',
                                 position: 'relative',
-                                overflow: 'visible',
+                                transition: 'background-color 120ms ease',
+                                '&::after': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  inset: 0,
+                                  backgroundColor: theme.palette.primary.main,
+                                  opacity: 0,
+                                  pointerEvents: 'none',
+                                  transition: 'opacity 120ms ease',
+                                },
+                                '&:hover': {
+                                  '&::after': {
+                                    opacity: 0.14,
+                                  },
+                                },
                               }}
                             >
-                                  {/* Status icon — absolute top-right */}
-                                  {showCoverageState && (
-                                    <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
-                                      {coverageDetails.hasCoverage ? (
-                                        <Tooltip title="Covered" placement="top" arrow>
-                                          <Box component="span" sx={{ display: 'inline-flex' }}>
-                                            <CheckSuccessHealthy fontSize="small" sx={{ color: theme.palette.text.primary, display: 'block' }} />
-                                          </Box>
-                                        </Tooltip>
-                                      ) : (
-                                        <Tooltip title="No Coverage" placement="top" arrow>
-                                          <Box component="span" sx={{ display: 'inline-flex' }}>
-                                            <Clear fontSize="small" sx={{ color: theme.palette.text.primary, display: 'block' }} />
-                                          </Box>
-                                        </Tooltip>
-                                      )}
-                                    </Box>
+                              {coverageDetails.value === null ? (
+                                <>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{ color: theme.palette.text.secondary, fontWeight: 700, fontSize: '16px', textAlign: 'center' }}
+                                  >
+                                    N/A
+                                  </Typography>
+                                </>
+                              ) : showCoverageState ? (
+                                <>
+                                  {coverageDetails.hasCoverage ? (
+                                    <Tooltip title="Covered" placement="top" arrow>
+                                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0 }}>
+                                        <CheckSuccessHealthy fontSize="small" sx={{ color: style.iconColor, display: 'block' }} />
+                                      </Box>
+                                    </Tooltip>
+                                  ) : (
+                                    <Tooltip title="No Coverage" placement="top" arrow>
+                                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0 }}>
+                                        <Clear fontSize="small" sx={{ color: style.iconColor, display: 'block' }} />
+                                      </Box>
+                                    </Tooltip>
                                   )}
+                                </>
+                              ) : (
+                                <>
+                                  <Typography
+                                    variant="code1"
+                                    sx={{
+                                      color: style.textColor,
+                                      fontSize: '16px',
+                                      lineHeight: 1,
+                                      flex: 1,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      mb: coverageViewMode === 'percent' || coverageViewMode === 'deployment' ? '4px' : '2px',
+                                    }}
+                                  >
+                                    {`${coverageDetails.value}%`}
+                                  </Typography>
 
-                                  {/* Percentage */}
-                                  {showPercentageCoverage && (
-                                    <Typography
-                                      variant="code1"
-                                      sx={{
-                                        color: style.textColor,
-                                        fontSize: '18px',
-                                        mb: '6px',
-                                      }}
-                                    >
-                                      {`${coverageDetails.value}%`}
-                                    </Typography>
-                                  )}
-
-                                  {/* Progress bar */}
-                                  {showPercentageCoverage && (
+                                  <Box sx={{ mb: '2px' }}>
                                     <LinearProgress
                                       value={coverageDetails.value}
                                       variant="determinate"
                                       sx={{
-                                        height: 6,
+                                        height: 5,
                                         borderRadius: '999px',
                                         bgcolor: theme.palette.action.hover,
-                                        mb: '12px',
                                         '& .MuiLinearProgress-bar': {
                                           bgcolor: style.barColor,
                                         },
                                       }}
                                     />
-                                  )}
-
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                    {mappedProducts.map((productName) => {
-                                      const ProductIcon = productIcons[productName];
-                                      const active = licensedProducts.has(productName);
-                                      return (
-                                        <Tooltip key={`${asset}-${nist}-${productName}`} title={productName} placement="top" arrow>
-                                          <Box
-                                            component="span"
-                                            sx={{
-                                              display: 'inline-flex',
-                                              flexShrink: 0,
-                                              opacity: active ? 1 : 0.45,
-                                            }}
-                                          >
-                                            <ProductIcon
-                                              fontSize="small"
-                                              sx={{
-                                                color: theme.palette.text.primary,
-                                                '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
-                                                '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
-                                              }}
-                                            />
-                                          </Box>
-                                        </Tooltip>
-                                      );
-                                    })}
                                   </Box>
+
+                                  {coverageViewMode !== 'deployment' ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', flexWrap: 'nowrap', minHeight: '14px', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+                                      {mappedProducts.map((productName) => {
+                                        const ProductIcon = productIcons[productName];
+                                        const active = licensedProducts.has(productName);
+                                        return (
+                                          <Tooltip key={`${asset}-${nist}-${productName}`} title={productName} placement="top" arrow>
+                                            <Box
+                                              component="span"
+                                              sx={{
+                                                display: 'inline-flex',
+                                                flexShrink: 0,
+                                                opacity: active ? 1 : 0.45,
+                                              }}
+                                            >
+                                              <ProductIcon
+                                                fontSize="small"
+                                                sx={{
+                                                  color: theme.palette.text.primary,
+                                                  '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
+                                                  '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
+                                                }}
+                                              />
+                                            </Box>
+                                          </Tooltip>
+                                        );
+                                      })}
+                                    </Box>
+                                  ) : (
+                                    <Box sx={{ minHeight: '14px' }} />
+                                  )}
+                                </>
+                              )}
                             </Box>
                           );
                         })}
@@ -2331,112 +2688,405 @@ export const CommandHome: React.FC = () => {
                     ))}
                   </Box>
                 </Box>
+                  </CardContent>
+                </Card>
 
-                {coverageViewMode === 'deployment' && (
-                  <Box sx={{ mt: '16px', borderTop: `1px solid ${theme.palette.divider}`, pt: '16px' }}>
-                    <Typography variant="subtitle2" sx={{ mb: '8px' }}>Reality / Deployment adjustments</Typography>
-                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: '12px' }}>
-                      Toggle active deployment gaps to model realized coverage. Reductions stack and are clamped to each product contribution.
-                    </Typography>
-                    <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px', bgcolor: theme.palette.background.paper, overflowX: 'auto' }}>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1.6fr 1.2fr 1fr 1fr', px: '12px', py: '8px', borderBottom: `1px solid ${theme.palette.divider}`, minWidth: '700px' }}>
-                        {['ON', 'COMPONENT', 'PRODUCT', 'SCOPE', 'REDUCTION'].map((header) => (
-                          <Typography key={header} variant="overline" sx={{ color: theme.palette.text.secondary }}>{header}</Typography>
-                        ))}
-                      </Box>
-                      {coverageAdjustmentRules.map((rule) => (
-                        <Box
-                          key={rule.id}
-                          sx={{
-                            display: 'grid',
-                            gridTemplateColumns: '60px 1.6fr 1.2fr 1fr 1fr',
-                            px: '12px',
-                            py: '10px',
-                            borderBottom: `1px solid ${theme.palette.divider}`,
-                            '&:last-child': { borderBottom: 'none' },
-                            minWidth: '700px',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <Checkbox
-                            size="small"
-                            checked={activeAdjustmentIds.has(rule.id)}
-                            onChange={() => toggleAdjustment(rule.id)}
-                          />
-                          <Typography variant="body2">{rule.component}</Typography>
-                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{rule.product}</Typography>
-                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{rule.scope}</Typography>
-                          <Typography variant="body2" sx={{ color: statusTokens.critical.main, fontWeight: 600 }}>{`-${rule.reduction}%`}</Typography>
+                <Popper
+                  open={Boolean(cellPopoverAnchor)}
+                  anchorEl={cellPopoverAnchor}
+                  arrow
+                  placement="bottom"
+                  id="coverage-cell-popper"
+                >
+                  <Box sx={{ width: '360px', maxWidth: '360px' }}>
+                    <PopperContent
+                      title={cellPopoverSelection
+                        ? `${cellPopoverSelection.asset.charAt(0)}${cellPopoverSelection.asset.slice(1).toLowerCase()} x ${cellPopoverSelection.nist.charAt(0)}${cellPopoverSelection.nist.slice(1).toLowerCase()}`
+                        : 'Cell Details'}
+                      action={<IconButton aria-label="close" onClick={handleCloseCellPopover} size="small"><CancelClose fontSize="small" /></IconButton>}
+                    >
+                      <Box sx={{ display: 'grid', gap: '10px' }}>
+                        {selectedCellWeights === null ? (
+                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                            This framework pairing is not applicable.
+                          </Typography>
+                        ) : coverageViewMode === 'coverage' ? (
+                          <Box sx={{ display: 'grid', gap: '14px' }}>
+                        <Box sx={{ display: 'grid', gap: '6px' }}>
+                          <Typography
+                            variant="h5"
+                            sx={{ color: theme.palette.text.secondary }}
+                          >
+                            Coverage Status
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${theme.palette.divider}`, pb: '8px' }}>
+                            <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                              {selectedCellCoverage && selectedCellCoverage > 0 ? 'Covered' : 'Not covered'}
+                            </Typography>
+                            {selectedCellCoverage && selectedCellCoverage > 0 && (
+                              <CheckSuccessHealthy fontSize="small" sx={{ color: statusTokens.healthy.main }} />
+                            )}
+                          </Box>
                         </Box>
+
+                        <Box sx={{ display: 'grid', gap: '6px' }}>
+                          <Typography
+                            variant="h5"
+                            sx={{ color: theme.palette.text.secondary }}
+                          >
+                            Contributing Products
+                          </Typography>
+                          {selectedContributingProducts.length > 0 ? (
+                            <Box sx={{ display: 'grid' }}>
+                              {selectedContributingProducts.map((productName) => (
+                                <Box key={productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                                    {productName}
+                                  </Typography>
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
+                                    Contributes
+                                  </Typography>
+                                </Box>
+                              ))}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, borderBottom: `1px solid ${theme.palette.divider}`, pb: '8px' }}>
+                              No licensed contributing products.
+                            </Typography>
+                          )}
+                        </Box>
+
+                        {selectedMissingProducts.length > 0 && (
+                          <Box sx={{ display: 'grid', gap: '6px' }}>
+                            <Typography
+                              variant="h5"
+                              sx={{ color: theme.palette.text.secondary }}
+                            >
+                              Missing Products
+                            </Typography>
+                            <Box sx={{ display: 'grid' }}>
+                              {selectedMissingProducts.map((productName) => {
+                                const impact = selectedMissingProductImpacts.find((item) => item.productName === productName);
+                                return (
+                                  <Box key={productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                    <Link
+                                      href="#"
+                                      onClick={(event) => event.preventDefault()}
+                                    >
+                                      {productName}
+                                    </Link>
+                                    <Typography variant="body1" sx={{ color: statusTokens.healthy.main, fontWeight: 700 }}>
+                                      {`+${impact?.gain ?? 0}%`}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        )}
+
+                        <Box sx={{ display: 'grid', gap: '6px' }}>
+                          <Typography
+                            variant="h5"
+                            sx={{ color: theme.palette.text.secondary }}
+                          >
+                            Recommendation
+                          </Typography>
+                          <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                            {selectedOwnedRecommendation}
+                          </Typography>
+                        </Box>
+                          </Box>
+                        ) : coverageViewMode === 'percent' ? (
+                          <Box sx={{ display: 'grid', gap: '14px' }}>
+                            <Box sx={{ display: 'grid', gap: '6px' }}>
+                              <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
+                                Coverage Score
+                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${theme.palette.divider}`, pb: '8px' }}>
+                                <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                                  Average weighted coverage
+                                </Typography>
+                                <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
+                                  {`${selectedCellCoverage ?? 0}%`}
+                                </Typography>
+                              </Box>
+                            </Box>
+
+                            <Box sx={{ display: 'grid', gap: '6px' }}>
+                              <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
+                                Product Contributions
+                              </Typography>
+                              {selectedContributingProductImpacts.length > 0 ? (
+                                <Box sx={{ display: 'grid' }}>
+                                  {selectedContributingProductImpacts.map((item) => (
+                                    <Box key={item.productName} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                      <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                                        {item.productName}
+                                      </Typography>
+                                      <Typography variant="body1" sx={{ color: statusTokens.healthy.main, fontWeight: 700 }}>
+                                        {`${item.contribution}%`}
+                                      </Typography>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, borderBottom: `1px solid ${theme.palette.divider}`, pb: '8px' }}>
+                                  No licensed contributing products.
+                                </Typography>
+                              )}
+                            </Box>
+
+                            {selectedMissingProducts.length > 0 && (
+                              <Box sx={{ display: 'grid', gap: '6px' }}>
+                                <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
+                                  Coverage Gaps
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${theme.palette.divider}`, pb: '8px' }}>
+                                  {selectedMissingProducts.length === 1 ? (
+                                    <Link
+                                      href="#"
+                                      onClick={(event) => event.preventDefault()}
+                                    >
+                                      {selectedMissingProducts[0]}
+                                    </Link>
+                                  ) : (
+                                    <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                                      Remaining coverage
+                                    </Typography>
+                                  )}
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
+                                    {`${selectedCoverageGap}%`}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            )}
+                          </Box>
+                        ) : coverageViewMode === 'deployment' ? (
+                          <Box sx={{ display: 'grid', gap: '14px' }}>
+                            <Box sx={{ display: 'grid', gap: '6px' }}>
+                              <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
+                                Coverage Summary
+                              </Typography>
+                              <Box sx={{ display: 'grid' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                                    Potential coverage
+                                  </Typography>
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
+                                    {`${selectedPotentialCoverage}%`}
+                                  </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                                    Realised coverage
+                                  </Typography>
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
+                                    {`${selectedRealizedCoverage}%`}
+                                  </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px' }}>
+                                  <Typography variant="body1" sx={{ color: theme.palette.text.primary, fontWeight: 500 }}>
+                                    Unrealised value
+                                  </Typography>
+                                  <Typography variant="body1" sx={{ color: selectedUnrealizedValue > 0 ? statusTokens.critical.main : theme.palette.text.primary, fontWeight: 700 }}>
+                                    {`${selectedUnrealizedValue}%`}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Box>
+
+                            {selectedActiveDeploymentRules.length > 0 && (
+                              <Box sx={{ display: 'grid', gap: '6px' }}>
+                                <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
+                                  Coverage Lost Due To
+                                </Typography>
+                                <Box sx={{ display: 'grid' }}>
+                                  {selectedActiveDeploymentRules.map((rule, index) => (
+                                    <Box key={rule.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: index < selectedActiveDeploymentRules.length - 1 ? `1px solid ${theme.palette.divider}` : 'none' }}>
+                                      <Link
+                                        href="#"
+                                        onClick={(event) => event.preventDefault()}
+                                      >
+                                        {`${rule.component.charAt(0).toUpperCase()}${rule.component.slice(1)}`}
+                                      </Link>
+                                      <Typography variant="body1" sx={{ color: statusTokens.critical.main, fontWeight: 700 }}>
+                                        {`-${rule.reduction}%`}
+                                      </Typography>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              </Box>
+                            )}
+
+                            {selectedMissingProductImpacts.length > 0 && (
+                              <Box sx={{ display: 'grid', gap: '6px' }}>
+                                <Typography variant="h5" sx={{ color: theme.palette.text.secondary }}>
+                                  Alternative Product Recommendations
+                                </Typography>
+                                <Box sx={{ display: 'grid' }}>
+                                  {selectedMissingProductImpacts.map((item, index) => (
+                                    <Box key={`alt-${item.productName}`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', py: '6px', borderBottom: index < selectedMissingProductImpacts.length - 1 ? `1px solid ${theme.palette.divider}` : 'none' }}>
+                                      <Link
+                                        href="#"
+                                        onClick={(event) => event.preventDefault()}
+                                      >
+                                        {item.productName}
+                                      </Link>
+                                      <Typography variant="body1" sx={{ color: statusTokens.healthy.main, fontWeight: 700 }}>
+                                        {`+${item.gain}%`}
+                                      </Typography>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              </Box>
+                            )}
+                          </Box>
+                        ) : (
+                          <>
+                        <Attribute
+                          label="Coverage status"
+                          variant="vertical"
+                          content={selectedCellCoverage && selectedCellCoverage > 0 ? 'Covered' : 'Not covered'}
+                        />
+
+                        <Attribute
+                          label="Coverage score"
+                          variant="vertical"
+                          content={`${selectedCellCoverage ?? 0}%`}
+                        />
+
+                        <Attribute
+                          label="Contributing products"
+                          variant="vertical"
+                          content={selectedContributingProducts.length > 0
+                            ? (
+                              <Box sx={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {selectedContributingProducts.map((productName) => (
+                                  <Chip key={productName} label={productName} size="nano" variant="filled" />
+                                ))}
+                              </Box>
+                            )
+                            : 'No licensed contributing products.'}
+                        />
+
+                        <Attribute
+                          label="Missing products"
+                          variant="vertical"
+                          content={selectedMissingProducts.length > 0
+                            ? (
+                              <Box sx={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {selectedMissingProducts.map((productName) => (
+                                  <Chip key={productName} label={productName} size="nano" variant="filled" />
+                                ))}
+                              </Box>
+                            )
+                            : 'No additional mapped products.'}
+                        />
+
+                        {coverageViewMode === 'deployment' && (
+                          <Attribute
+                            label="Deployment gaps"
+                            variant="vertical"
+                            content={selectedDeploymentRules.length > 0
+                              ? (
+                                <Box sx={{ display: 'grid', gap: '4px' }}>
+                                  {selectedDeploymentRules.map((rule) => {
+                                    const active = activeAdjustmentIds.has(rule.id);
+                                    return (
+                                      <Typography key={rule.id} variant="body2" sx={{ color: active ? theme.palette.text.secondary : theme.palette.text.primary }}>
+                                        {rule.component}: {active ? `-${rule.reduction}%` : 'enabled'}
+                                      </Typography>
+                                    );
+                                  })}
+                                </Box>
+                              )
+                              : 'No deployment reductions for this cell.'}
+                          />
+                        )}
+                          </>
+                        )}
+                      </Box>
+                    </PopperContent>
+                  </Box>
+                </Popper>
+              </Box>
+            </ClickAwayListener>
+
+            <Dialog fullWidth maxWidth="lg" onClose={() => setOpen(false)} open={open}>
+              <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                Scoring information
+                <IconButton aria-label="close" onClick={() => setOpen(false)} size="small">
+                  <CancelClose fontSize="small" />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent dividers sx={{ display: 'grid', gap: '16px' }}>
+                <Box sx={{ display: 'grid', gap: '6px' }}>
+                  <Typography variant="h6">Matrix Axes</Typography>
+                  <DialogContentText>
+                    <strong>X-axis (columns)</strong> NIST CSF functions — GOVERN, IDENTIFY, PROTECT, DETECT, RESPOND, RECOVER
+                  </DialogContentText>
+                  <DialogContentText>
+                    <strong>Y-axis (rows)</strong> CIS v8 asset types — DEVICES, SOFTWARE, NETWORK, USERS, DATA, DOCUMENTATION
+                  </DialogContentText>
+                </Box>
+
+                <Box sx={{ display: 'grid', gap: '6px' }}>
+                  <Typography variant="h6">Cell Scoring</Typography>
+                  <DialogContentText>Each cell maps to one or more Rapid7 products with a percentage weight.</DialogContentText>
+                  <DialogContentText>If you are licensed for a product, its percentage is added to the cell total (capped at 100%).</DialogContentText>
+                  <DialogContentText>If no products are licensed for a cell, it shows <strong>0%</strong>. Cells with no product mapping show <strong>N/A</strong>.</DialogContentText>
+                </Box>
+
+                <Box sx={{ display: 'grid', gap: '6px' }}>
+                  <Typography variant="h6">Display Modes</Typography>
+                  <DialogContentText>Coverage✓ = at least one product licensed, ✕ = none licensed, N/A = no mapping.</DialogContentText>
+                  <DialogContentText>--percent shows the summed percentage for licensed products in each cell.</DialogContentText>
+                  <DialogContentText>--solution shows the Rapid7 product names mapped to each cell.</DialogContentText>
+                  <DialogContentText>--reality adjusts percentages based on actual deployment state (see below).</DialogContentText>
+                </Box>
+
+                <Box sx={{ display: 'grid', gap: '6px' }}>
+                  <Typography variant="h6">Reality / Deployment Adjustments (--reality or --deployment)</Typography>
+                  <DialogContentText>The following reductions are applied when infrastructure components are missing:</DialogContentText>
+                  <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px', overflow: 'hidden' }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr', px: '12px', py: '8px', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                      {['Component', 'Product affected', 'Scope', 'Reduction'].map((header) => (
+                        <Typography key={header} variant="overline" sx={{ color: theme.palette.text.secondary }}>{header}</Typography>
                       ))}
                     </Box>
+                    {[
+                      ['Scan engines', 'insightVM', 'All cells', '-25%'],
+                      ['Collectors', 'insightIDR', 'All cells', '-50%'],
+                      ['Network sensors', 'insightIDR', 'All cells', '-25%'],
+                      ['Honeypots', 'insightIDR', 'All cells', '-10%'],
+                      ['Orchestrator', 'insightIDR', 'DETECT only', '-10%'],
+                      ['SC connectors < 5', 'Surface Command', 'All cells', '-50%'],
+                      ['No event sources', 'insightIDR', 'All cells', '-75%'],
+                      ['< 5 event sources', 'insightIDR', 'All cells', '-50%'],
+                      ['Stale / offline agents', 'insightIDR', 'All cells', '-10% per 10% unhealthy'],
+                      ['No ICON workflows', 'insightIDR', 'DETECT only', '-10%'],
+                    ].map(([component, product, scope, reduction]) => (
+                      <Box key={component} sx={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr', px: '12px', py: '8px', borderBottom: `1px solid ${theme.palette.divider}`, '&:last-child': { borderBottom: 'none' } }}>
+                        <Typography variant="body2">{component}</Typography>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{product}</Typography>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>{scope}</Typography>
+                        <Typography variant="body2" sx={{ color: statusTokens.critical.main, fontWeight: 600 }}>{reduction}</Typography>
+                      </Box>
+                    ))}
                   </Box>
-                )}
-              </CardContent>
-            </Card>
+                  <DialogContentText>Reductions stack additively. Product contributions are floored at 0%. Cell totals are clamped to [0%, 100%].</DialogContentText>
+                </Box>
+
+                <Box sx={{ display: 'grid', gap: '6px' }}>
+                  <Typography variant="h6">Recommendations</Typography>
+                  <DialogContentText>After the matrix, unlicensed products are ranked by how much they would improve your coverage.</DialogContentText>
+                  <DialogContentText>In percent mode, ranking is by total percentage points gained. In default mode, ranking is by number of new cells covered.</DialogContentText>
+                </Box>
+              </DialogContent>
+            </Dialog>
           </Box>
         </Box>
-
-        {/* Recommendations */}
-        <Card sx={{ ...incidentCardSurface(theme), width: '100%' }}>
-          <CardContent>
-            <DashboardCardHeader
-              title="Recommendations"
-              subheader={recommendationSubheader}
-            />
-            {recommendations.length === 0 ? (
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: '12px' }}>
-                You&apos;re fully covered &mdash; no additional products would improve the score.
-              </Typography>
-            ) : (
-              <Box sx={{ display: 'grid', gap: '8px', mt: '8px' }}>
-                {recommendations.map((rec) => {
-                  const ProductIcon = productIcons[rec.name];
-                  const description = productDescriptions[rec.name];
-                  return (
-                    <Card
-                      key={rec.name}
-                      variant="outlined"
-                      sx={{
-                        boxShadow: theme.shadows[1],
-                        pointerEvents: 'none',
-                        '& *': { pointerEvents: 'auto' },
-                      }}
-                    >
-                      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '12px', py: '12px !important' }}>
-                        <ProductIcon
-                          fontSize="small"
-                          sx={{
-                            flexShrink: 0,
-                            color: theme.palette.text.primary,
-                            '& *[fill]:not([fill="none"])': { fill: `${theme.palette.text.primary} !important` },
-                            '& *[stroke]:not([stroke="none"])': { stroke: `${theme.palette.text.primary} !important` },
-                          }}
-                        />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                            {rec.name}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                            {description}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                          {coverageViewMode === 'coverage' && <Chip label={`+${rec.newCellsGained} new cells`} size="nano" />}
-                          {coverageViewMode === 'percent' && <Chip label={`+${rec.pointsGained} pts`} size="nano" />}
-                          {coverageViewMode === 'deployment' && <Chip label={`${rec.featureBoostCount} deployment boosts`} size="nano" />}
-                          <Button size="small" variant="outlined" endIcon={<NextChevronRightArrow />}>
-                            Learn More
-                          </Button>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </Box>
-            )}
-          </CardContent>
-        </Card>
       </Box>
     );
   };
@@ -2506,7 +3156,7 @@ export const CommandHome: React.FC = () => {
         <Card
           variant="ai"
           sx={{
-            color: 'rgb(0, 0, 0)',
+            color: theme.palette.text.primary,
             boxShadow: 'rgba(31, 44, 54, 0.03) 0px 0.6px 0.8px 0px, rgba(31, 44, 54, 0.04) 0px 2.01px 2.68px 0px, rgba(31, 44, 54, 0.07) 0px 3px 12px 0px',
             transition: 'box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)',
             borderRadius: '8px',

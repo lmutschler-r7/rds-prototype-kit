@@ -49,6 +49,26 @@ Accessibility conformance is low-emphasis in this repository unless explicitly r
    - Flag "Go to ..." buttons without trailing chevron `endIcon`.
 14. Severity/status/priority compliance:
    - Flag table cells for severity/status/priority that do not render chip + impact icon.
+   - Flag chips using `variant="outlined"` unless the prompt or page requirement explicitly calls for outlined styling.
+15. Popper drilldown compliance:
+   - For structured label/value popper content, prefer `Attribute` over ad-hoc label/value `Typography` stacks.
+   - Exception: do not flag Coverage Matrix `Owned Coverage` drilldowns that intentionally use approved sectioned row layouts without `Attribute`.
+   - Flag decorative metadata chips in poppers (for example generic "Drilldown" tags) unless explicitly required.
+16. Link styling compliance:
+   - Flag `Link` components from `@rapid7/rds` that override color, text decoration, or font weight unless explicitly required by prompt.
+17. Coverage Matrix popper interaction compliance:
+   - Flag hover-driven open/close behavior for Coverage Matrix cell poppers; expect click/keyboard toggle and click-away close.
+18. Coverage Matrix popper typography compliance:
+   - Flag popper percentage values that are not rendered as `Typography` `body1` with `fontWeight: 700`.
+19. Coverage Matrix popper content hygiene:
+   - Flag optional sections that render only empty-state filler text when no actionable data exists; prefer hiding those sections.
+   - Flag trailing bottom dividers on the last row of popper list sections.
+20. Coverage Matrix actionable label compliance:
+   - For missing-product and coverage-loss rows intended for future navigation, flag plain-text labels; expect `Link` placeholder usage.
+21. Coverage Matrix info dialog compliance:
+   - For scoring/help dialogs with header close affordance, flag redundant footer-only dismiss action rows.
+22. Coverage Matrix KPI icon consistency:
+   - For opportunity-style KPI metrics, flag non-`SortAscendingArrow` icon usage unless explicitly requested otherwise.
 
 ## Token and Styling Compliance
 1. Flag raw visual color literals (`#`, `rgb`, `rgba`, `hsl`) unless explicitly waived.

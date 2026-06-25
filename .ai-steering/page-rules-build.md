@@ -70,6 +70,7 @@ This project is prototype-first: prioritize visual direction, non-default compon
 10. Dashboard card headings:
    - Prefer `CardHeader` over standalone `Typography` title rows for dashboard chart/table cards.
    - If many cards are present, define a local shared header helper to keep spacing/typography consistent.
+   - When a card header title sits beside an inline control such as a select, render the title with `h3` and keep the control aligned in the same row.
 11. "Go to ..." CTA actions:
    - Use trailing chevron icon (`endIcon`) on the button.
    - Keep CTA phrasing verb-based and destination-specific.
@@ -88,6 +89,25 @@ This project is prototype-first: prioritize visual direction, non-default compon
    - Keep title-adjacent status indicators (for example severity/CVSS chips, AI markers) in `DetailsPageHeader` `slots.tags`.
    - For detail-property rows in content cards, prefer `Attribute` with explicit `labelWidth` and token-backed `AttributeRootProps`/`LabelProps`.
    - For narrative intelligence content in details pages, `Card` with `variant="ai"` is the preferred optional treatment when AI-context content is present.
+12. Popper drilldown guidance:
+   - For structured label/value content in `PopperContent`, prefer `Attribute` over ad-hoc `Typography` stacks.
+   - Exception: for Coverage Matrix `Owned Coverage` drilldowns, a sectioned row layout matching approved design references is allowed without `Attribute`.
+   - Avoid decorative metadata chips (for example generic "Drilldown" or duplicate view chips) unless explicitly required by prompt.
+13. Link styling guidance:
+   - Use default `Link` styling from `@rapid7/rds`.
+   - Do not override link color, text decoration, or font weight with `sx` unless the prompt explicitly requires it.
+14. Coverage Matrix popper conventions:
+   - Use click-driven interaction for matrix cell poppers: click/keyboard toggle to open or close, plus click-away close behavior.
+   - Do not use hover-open/hover-close timers for Coverage Matrix cell poppers.
+   - Popper percentage values (across Owned Coverage, Coverage Depth, and Realized Value sections) should use `Typography` `body1` with `fontWeight: 700`.
+   - For optional sections (for example Coverage Gaps, Coverage Lost Due To, Alternative Product Recommendations), hide the entire section when no actionable data exists instead of rendering empty-state filler text.
+   - Render list dividers only between rows; avoid trailing bottom dividers on the final row in a section.
+   - When missing-product or coverage-loss labels are intended to be actionable later, render labels with `Link` placeholders (`href="#"` + `preventDefault`) rather than static text.
+15. Coverage Matrix info dialog conventions:
+   - Prefer a larger dialog size (`maxWidth="lg"`) for scoring/help content.
+   - Use header close affordance (`IconButton`) and avoid footer `DialogActions` buttons when the dialog only needs dismiss behavior.
+16. Coverage Matrix KPI iconography:
+   - For opportunity-style metrics (for example largest opportunity, coverage opportunity, value left on the table), prefer `SortAscendingArrow`.
 
 ## Chart Implementation Policy
 1. Before implementing or significantly customizing ECharts visuals, reference official ECharts docs/examples at `https://echarts.apache.org/examples` or related ECharts documentation.
@@ -170,6 +190,7 @@ This project is prototype-first: prioritize visual direction, non-default compon
    - numeric values: right horizontal alignment + vertical center
 7. Severity/status/priority fields in tables:
    - Render with `Chip` rather than plain text.
+   - Use `variant="filled"` by default for chips unless an explicit requirement calls for `outlined`.
    - Include the appropriate Impact icon in the chip (`ImpactCritical`, `ImpactHigh`, `ImpactMedium`, `ImpactLow`, `ImpactVeryLow` as applicable).
 8. Dashboard card internals:
    - If a card contains chart or table content, keep header spacing consistent (`CardHeader` followed by content region).
