@@ -427,9 +427,7 @@ export const ResponseRemediation: React.FC = () => {
               size="medium"
               variant="contained"
               startIcon={activeTab === 'remediations' ? <Icons.Reporting fontSize="small" /> : <Icons.AddPlusUnbound fontSize="small" />}
-              onClick={() => {
-                console.log(activeTab === 'remediations' ? 'create report' : 'create case');
-              }}
+              onClick={() => {}}
             >
               {activeTab === 'remediations' ? 'Create Report' : 'Create Case'}
             </Button>,

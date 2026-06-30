@@ -471,7 +471,7 @@ export const Findings: React.FC = () => {
       size="small"
       variant="contained"
       onClick={() => {
-        console.log('selected rows', selectedRows);
+        void selectedRows;
       }}
     >
       Batch
@@ -480,18 +480,10 @@ export const Findings: React.FC = () => {
 
   const TableActions = () => (
     <Stack direction="row" spacing={1}>
-      <IconButton
-        onClick={() => {
-          console.log('clicked expand');
-        }}
-      >
+      <IconButton onClick={() => {}}>
         <Icons.Expand />
       </IconButton>
-      <IconButton
-        onClick={() => {
-          console.log('clicked settings');
-        }}
-      >
+      <IconButton onClick={() => {}}>
         <Icons.Settings />
       </IconButton>
     </Stack>

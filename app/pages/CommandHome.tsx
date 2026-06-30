@@ -48,6 +48,7 @@ import {
   ImpactHigh,
   ImpactLow,
   ImpactMedium,
+  DownloadExport,
   InformationHint,
   NextChevronRightArrow,
   Risk,
@@ -337,6 +338,10 @@ const coverageProducts: CoverageProduct[] = [
   { name: 'DSPM', defaultLicensed: false },
 ];
 
+const defaultLicensedProducts = coverageProducts
+  .filter((product) => product.defaultLicensed)
+  .map((product) => product.name);
+
 const coverageAdjustmentRules: CoverageAdjustmentRule[] = [
   { id: 'scan-engines', component: 'Scan engines', product: 'Vulnerability Management', scope: 'All cells', reduction: 25 },
   { id: 'collectors', component: 'Collectors', product: 'SIEM', scope: 'All cells', reduction: 50 },
@@ -504,7 +509,7 @@ export const CommandHome: React.FC = () => {
   const theme = useTheme<Theme>();
   const [activeTab, setActiveTab] = useState(0);
   const [licensedProducts, setLicensedProducts] = useState<Set<ProductName>>(
-    () => new Set(coverageProducts.filter((p) => p.defaultLicensed).map((p) => p.name)),
+    () => new Set(defaultLicensedProducts),
   );
   const [value, setValue] = useState<CoverageViewMode>('coverage');
   const [activeAdjustmentIds, setActiveAdjustmentIds] = useState<Set<string>>(() => new Set(defaultActiveAdjustmentIds));
@@ -568,6 +573,11 @@ export const CommandHome: React.FC = () => {
     event.preventDefault();
     handleToggleCellPopover(event, asset, nist);
   };
+
+  const resetLicensedProducts = () => {
+    setLicensedProducts(new Set(defaultLicensedProducts));
+  };
+
   const tokenTheme = theme.palette as Theme['palette'] & { brand: 'Original' | 'Callisto'; mode: 'light' | 'dark' };
   const semanticTokens = getValue('semantic', tokenTheme.brand, tokenTheme.mode);
   const dataVizTokens = getValue('dataViz', tokenTheme.brand, tokenTheme.mode);
@@ -2365,6 +2375,15 @@ export const CommandHome: React.FC = () => {
                 <CardHeader
                   title="Licensed Products"
                   subheader="Toggle products in your owned portfolio to model baseline coverage."
+                  action={(
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={resetLicensedProducts}
+                    >
+                      Reset
+                    </Button>
+                  )}
                 />
                 <CardContent sx={{ pt: 0, pb: '16px' }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -2473,6 +2492,12 @@ export const CommandHome: React.FC = () => {
                   )}
                   action={(
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Button
+                        size="medium"
+                        startIcon={<DownloadExport fontSize="small" />}
+                      >
+                        Export
+                      </Button>
                       <FormControl size="small" sx={{ minWidth: 220 }}>
                         <InputLabel id="coverage-mode-label">Select option</InputLabel>
                         <Select
@@ -2723,9 +2748,13 @@ export const CommandHome: React.FC = () => {
                       title={cellPopoverSelection
                         ? `${cellPopoverSelection.asset.charAt(0)}${cellPopoverSelection.asset.slice(1).toLowerCase()} x ${cellPopoverSelection.nist.charAt(0)}${cellPopoverSelection.nist.slice(1).toLowerCase()}`
                         : 'Cell Details'}
-                      action={<IconButton aria-label="close" onClick={handleCloseCellPopover} size="small"><CancelClose fontSize="small" /></IconButton>}
                     >
                       <Box sx={{ display: 'grid', gap: '10px' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <IconButton aria-label="close" onClick={handleCloseCellPopover} size="small">
+                            <CancelClose fontSize="small" />
+                          </IconButton>
+                        </Box>
                         {selectedCellWeights === null ? (
                           <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                             This framework pairing is not applicable.
